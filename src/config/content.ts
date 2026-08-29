@@ -1,0 +1,269 @@
+import type { IconName } from '@/components/icons';
+
+/**
+ * Conteúdo editorial do site. Tudo aqui é configurável e nada foi inventado
+ * a respeito da corretora: números, seguradoras e depoimentos começam vazios
+ * ou nulos e as seções correspondentes se ocultam automaticamente.
+ */
+
+/* -------------------------------------------------------------------------- */
+/* DIFERENCIAIS                                                               */
+/* -------------------------------------------------------------------------- */
+
+export interface Differential {
+  icon: IconName;
+  title: string;
+  text: string;
+}
+
+export const differentials: Differential[] = [
+  {
+    icon: 'user-check',
+    title: 'Atendimento personalizado',
+    text: 'Você fala com quem entende do seu caso, não com um formulário. Cada cotação começa com uma conversa.',
+  },
+  {
+    icon: 'layers',
+    title: 'Diversas seguradoras',
+    text: 'Comparamos condições em várias companhias e apresentamos as opções lado a lado, com prós e contras.',
+  },
+  {
+    icon: 'compass',
+    title: 'Consultoria especializada',
+    text: 'Análise técnica de coberturas, franquias e cláusulas — para você contratar entendendo o que está contratando.',
+  },
+  {
+    icon: 'zap',
+    title: 'Cotação rápida',
+    text: 'Processo enxuto: informações essenciais, retorno objetivo e sem burocracia desnecessária.',
+  },
+  {
+    icon: 'life-buoy',
+    title: 'Suporte durante toda a vigência',
+    text: 'A relação não termina na assinatura. Endossos, renovações e dúvidas continuam com o mesmo time.',
+  },
+  {
+    icon: 'headset',
+    title: 'Atendimento humano',
+    text: 'Em um sinistro, ninguém quer robô. Quer alguém do lado, orientando cada passo até a indenização.',
+  },
+  {
+    icon: 'building-user',
+    title: 'Soluções para pessoas e empresas',
+    text: 'Do seguro de vida familiar à apólice de frota e ao seguro garantia de uma licitação.',
+  },
+];
+
+/* -------------------------------------------------------------------------- */
+/* COMO FUNCIONA                                                              */
+/* -------------------------------------------------------------------------- */
+
+export interface Step {
+  n: string;
+  title: string;
+  text: string;
+  icon: IconName;
+}
+
+export const steps: Step[] = [
+  {
+    n: '01',
+    title: 'Você solicita uma cotação',
+    text: 'Pelo site, WhatsApp ou telefone. Poucos dados bastam para começar.',
+    icon: 'cursor-click',
+  },
+  {
+    n: '02',
+    title: 'Entendemos suas necessidades',
+    text: 'Conversamos sobre o seu risco real: o que precisa ser protegido e até onde.',
+    icon: 'search-heart',
+  },
+  {
+    n: '03',
+    title: 'Buscamos as melhores opções',
+    text: 'Consultamos as seguradoras e organizamos um comparativo claro de coberturas e valores.',
+    icon: 'layers',
+  },
+  {
+    n: '04',
+    title: 'Você escolhe',
+    text: 'Com a explicação técnica de cada alternativa. Sem pressão e sem letra miúda.',
+    icon: 'check-circle',
+  },
+  {
+    n: '05',
+    title: 'Nós cuidamos do resto',
+    text: 'Emissão, vistoria, endossos, renovação e acompanhamento de sinistro do início ao fim.',
+    icon: 'shield-check',
+  },
+];
+
+/* -------------------------------------------------------------------------- */
+/* SOBRE + INDICADORES                                                        */
+/* -------------------------------------------------------------------------- */
+
+export interface Stat {
+  /** null = número real ainda não informado; o card não é renderizado. */
+  value: number | null;
+  suffix?: string;
+  prefix?: string;
+  label: string;
+}
+
+/**
+ * IMPORTANTE: preencha com os números reais da corretora.
+ * Enquanto estiverem `null`, a seção de indicadores não aparece no site.
+ */
+export const stats: Stat[] = [
+  { value: null, suffix: '+', label: 'Clientes atendidos' },
+  { value: null, suffix: '', label: 'Anos de experiência' },
+  { value: null, suffix: '+', label: 'Seguros contratados' },
+  { value: null, suffix: '', label: 'Seguradoras parceiras' },
+];
+
+export const about = {
+  eyebrow: 'Sobre a FIXSEG',
+  title: 'Segurança para hoje. Tranquilidade para amanhã.',
+  /**
+   * Textos institucionais. Substitua pelos dados reais de história e propósito
+   * da corretora — o que está aqui descreve apenas a proposta de atuação.
+   */
+  paragraphs: [
+    'A FIXSEG existe para transformar a contratação de um seguro em uma decisão consciente. Em vez de empurrar apólices, começamos pela pergunta que importa: o que aconteceria com você, sua família ou sua empresa se o pior acontecesse amanhã?',
+    'A partir dessa resposta, desenhamos a proteção. Consultamos diversas seguradoras, comparamos coberturas linha por linha e explicamos cada cláusula em português claro — para que a escolha seja sua, e não uma imposição do mercado.',
+    'Atuamos com pessoas físicas e jurídicas, de um seguro de vida individual a operações de transporte de cargas, frotas e seguro garantia. E permanecemos ao lado do cliente durante toda a vigência, especialmente na hora em que a apólice precisa funcionar.',
+  ],
+  pillars: [
+    { title: 'Técnica', text: 'Leitura criteriosa de coberturas, exclusões e franquias antes de qualquer recomendação.' },
+    { title: 'Transparência', text: 'Comparativo aberto entre seguradoras, com os pontos fortes e fracos de cada proposta.' },
+    { title: 'Presença', text: 'Um interlocutor conhecido para cotação, endosso, renovação e sinistro.' },
+  ],
+};
+
+/* -------------------------------------------------------------------------- */
+/* SEGURADORAS PARCEIRAS                                                      */
+/* -------------------------------------------------------------------------- */
+
+export interface Insurer {
+  name: string;
+  /** Caminho do logo em /public/seguradoras/…  (SVG ou PNG com fundo transparente) */
+  logo: string;
+  /** Site oficial (opcional) */
+  url?: string;
+}
+
+/**
+ * Adicione aqui APENAS seguradoras com as quais a corretora efetivamente
+ * trabalha e cujos logos estejam autorizados. Coloque os arquivos em
+ * /public/seguradoras/. Com a lista vazia, a seção não é renderizada.
+ *
+ * Exemplo:
+ * { name: 'Nome da Seguradora', logo: '/seguradoras/nome.svg', url: 'https://…' }
+ */
+export const insurers: Insurer[] = [];
+
+/* -------------------------------------------------------------------------- */
+/* DEPOIMENTOS                                                                */
+/* -------------------------------------------------------------------------- */
+
+export interface Testimonial {
+  quote: string;
+  author: string;
+  /** Cargo/cidade — opcional */
+  role?: string;
+  /** Produto contratado — opcional */
+  product?: string;
+  /** Avatar em /public/depoimentos/… — opcional */
+  avatar?: string;
+}
+
+/**
+ * Depoimentos reais de clientes, com autorização de uso.
+ * Com a lista vazia, a seção não é renderizada — nada é inventado.
+ */
+export const testimonials: Testimonial[] = [];
+
+/** Autoplay do carrossel de depoimentos (ms). 0 desativa. */
+export const testimonialsAutoplay = 6500;
+
+/* -------------------------------------------------------------------------- */
+/* FAQ                                                                        */
+/* -------------------------------------------------------------------------- */
+
+export interface FaqItem {
+  q: string;
+  a: string;
+}
+
+export const faq: FaqItem[] = [
+  {
+    q: 'Qual seguro é ideal para mim?',
+    a: 'Depende do que você teria dificuldade de repor sozinho. Para uma família, geralmente começa pelo seguro de vida e pelo residencial. Para uma empresa, pelo patrimonial, pela responsabilidade civil e pelas exigências contratuais que ela precisa cumprir. Na cotação, mapeamos isso com você antes de indicar qualquer produto.',
+  },
+  {
+    q: 'Como funciona a cotação?',
+    a: 'Você informa o tipo de seguro e alguns dados essenciais pelo formulário, WhatsApp ou telefone. Nós analisamos o risco, consultamos as seguradoras e voltamos com um comparativo das opções disponíveis, explicando coberturas, franquias e diferenças entre as propostas.',
+  },
+  {
+    q: 'Quanto tempo demora para receber uma cotação?',
+    a: 'Varia conforme o produto. Seguros mais padronizados, como auto e residencial, costumam ser rápidos. Riscos empresariais, transportes, frotas e seguro garantia exigem análise das seguradoras e podem levar mais tempo. Sempre informamos o prazo estimado assim que recebemos os dados.',
+  },
+  {
+    q: 'Posso comparar diferentes seguradoras?',
+    a: 'Sim — é justamente o papel da corretora. Apresentamos as propostas lado a lado e apontamos onde elas diferem de fato: limites, franquias, exclusões, assistências e forma de regulação de sinistro. A decisão final é sempre sua.',
+  },
+  {
+    q: 'Posso contratar o seguro online?',
+    a: 'Boa parte do processo é digital: cotação, envio de documentos e assinatura eletrônica quando a seguradora permite. Ainda assim, mantemos a etapa de conversa com um especialista antes da contratação, porque é ali que se evita comprar uma cobertura que não atende à necessidade.',
+  },
+  {
+    q: 'A corretora auxilia em caso de sinistro?',
+    a: 'Sim. Orientamos sobre a abertura do aviso, os documentos exigidos, os prazos e o acompanhamento junto à seguradora até a conclusão. É o momento em que a corretora mais importa, e é nele que fazemos questão de estar presentes.',
+  },
+  {
+    q: 'Quais documentos são necessários?',
+    a: 'Para pessoa física, geralmente documento de identidade, CPF, comprovante de endereço e os dados do bem a segurar (como CRLV, no caso de veículos). Para pessoa jurídica, cartão CNPJ, contrato social e informações da operação. A lista definitiva depende do produto e da seguradora, e nós indicamos exatamente o que pedir.',
+  },
+  {
+    q: 'Posso falar com um especialista antes de contratar?',
+    a: 'Sim, e recomendamos. Nenhuma contratação precisa ser feita às cegas: você pode tirar todas as dúvidas por WhatsApp, telefone ou reunião antes de decidir.',
+  },
+];
+
+/* -------------------------------------------------------------------------- */
+/* BLOG                                                                       */
+/* -------------------------------------------------------------------------- */
+
+export interface Post {
+  slug: string;
+  title: string;
+  excerpt: string;
+  category: string;
+  /** ISO date. null = ainda não publicado */
+  date: string | null;
+  /** Imagem de capa em /public/blog/… — opcional */
+  cover?: string;
+  /** Tempo de leitura estimado */
+  readingTime?: string;
+  /** URL externa, caso o conteúdo more fora do site */
+  url?: string;
+}
+
+/**
+ * Estrutura pronta para receber conteúdo de um CMS ou do Supabase
+ * (ver src/services/content.ts). Enquanto a lista estiver vazia, a seção
+ * exibe um estado "em breve" em vez de artigos fictícios.
+ */
+export const posts: Post[] = [];
+
+/** Categorias previstas para o blog — usadas nos filtros e no SEO. */
+export const postCategories = [
+  'Seguros',
+  'Seguro Auto',
+  'Seguro Empresarial',
+  'Seguro Residencial',
+  'Seguro de Vida',
+  'Proteção patrimonial',
+  'Prevenção',
+  'Finanças',
+];

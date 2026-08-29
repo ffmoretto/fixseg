@@ -1,0 +1,600 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================================================================
+   IDENTIDADE VISUAL FIXSEG — TOKENS SEMÂNTICOS
+   ==========================================================================
+   A paleta continua vindo exclusivamente do arquivo da logo: preto, azul
+   elétrico, azul ciano e branco. O que muda entre os temas é o PAPEL de cada
+   cor, não a paleta.
+
+   Os tokens são triplas RGB (sem `rgb()`) para que os modificadores de
+   opacidade do Tailwind funcionem: `text-fg/60`, `border-line/40` etc.
+
+   Regra de ouro ao editar componentes: nunca escreva `text-white` ou
+   `bg-black` direto. Use os tokens — é o que mantém os dois temas em pé.
+   ========================================================================== */
+
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  /* superfícies */
+  --page: 250 251 253; /* fundo da página */
+  --panel: 255 255 255; /* cartões e painéis */
+  --panel-2: 240 244 249; /* rodapé, campos, áreas recuadas */
+
+  /* texto — quatro níveis, do mais forte ao mais discreto */
+  --fg: 7 11 20;
+  --fg-2: 42 52 70;
+  --fg-3: 88 100 122;
+  --fg-4: 132 143 163;
+
+  /* traços */
+  --line: 17 24 39;
+  --line-opacity: 0.12;
+  --line-strong-opacity: 0.22;
+
+  /* véu aplicado sobre as superfícies (escurece no claro, clareia no escuro) */
+  --tint: 17 24 39;
+
+  /* marca */
+  --brand: 11 100 252; /* azul elétrico */
+  --brand-2: 2 179 249; /* azul ciano */
+  --brand-mid: 5 145 244;
+
+  /* azul seguro para TEXTO no tema atual (contraste sobre o fundo) */
+  --accent-ink: 6 79 199;
+
+  /* logo */
+  --logo-cyan: #0288d1;
+  --logo-blue: #0b64fc;
+  --logo-blue-2: #0591f4;
+
+  /* ------------------------------------------------------------------------
+     MASSA DAS ILUSTRAÇÕES (narrativa em scroll)
+     ------------------------------------------------------------------------
+     São cores OPACAS, não alfas. Isso é deliberado: com formas translúcidas,
+     dois volumes sobrepostos mostram um através do outro e a ilustração ganha
+     um aspecto de raio-X. `color-mix` resolve a mistura uma vez, no token, e a
+     forma passa a cobrir o que está atrás dela.
+     A escala vai do "quase página" (air) ao "recorte máximo" (ink). No tema
+     claro as porcentagens são mais altas porque tinta sobre papel branco perde
+     peso muito mais rápido do que luz sobre fundo escuro.
+     `--m-void` é o oposto da escala: um vazio SEMPRE mais escuro que a página
+     (pneu, vão de porta, buraco). Sem ele, no tema escuro um pneu "denso"
+     viraria o objeto mais claro da cena.
+     ------------------------------------------------------------------------ */
+  --m-air: color-mix(in srgb, rgb(var(--fg)) 6%, rgb(var(--page)));
+  --m-far: color-mix(in srgb, rgb(var(--fg)) 13%, rgb(var(--page)));
+  --m-mid: color-mix(in srgb, rgb(var(--fg)) 21%, rgb(var(--page)));
+  --m-body: color-mix(in srgb, rgb(var(--fg)) 30%, rgb(var(--page)));
+  --m-near: color-mix(in srgb, rgb(var(--fg)) 40%, rgb(var(--page)));
+  --m-deep: color-mix(in srgb, rgb(var(--fg)) 55%, rgb(var(--page)));
+  --m-ink: color-mix(in srgb, rgb(var(--fg)) 73%, rgb(var(--page)));
+  --m-void: color-mix(in srgb, #000 58%, rgb(var(--page)));
+  --m-lift: #ffffff;
+
+  /* brilhos decorativos */
+  --glow-a: radial-gradient(circle, rgba(11, 100, 252, 0.14) 0%, rgba(11, 100, 252, 0.04) 45%, transparent 70%);
+  --glow-b: radial-gradient(circle, rgba(2, 179, 249, 0.13) 0%, rgba(2, 179, 249, 0.03) 50%, transparent 72%);
+  --glow-core: radial-gradient(circle, rgba(2, 179, 249, 0.22) 0%, rgba(11, 100, 252, 0.12) 45%, transparent 72%);
+  --glow-band: radial-gradient(ellipse at center, rgba(11, 100, 252, 0.1) 0%, transparent 66%);
+  --glow-panel: radial-gradient(120% 140% at 12% 0%, rgba(11, 100, 252, 0.1) 0%, transparent 58%);
+
+  /* sombras */
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04), 0 18px 40px -28px rgba(16, 24, 40, 0.18);
+  --shadow-lift: 0 24px 60px -32px rgba(16, 24, 40, 0.28), 0 0 0 1px rgba(17, 24, 39, 0.06);
+  --shadow-header: 0 10px 34px -26px rgba(16, 24, 40, 0.35);
+
+  /* superfície de vidro do header e do menu */
+  --veil: 255 255 255;
+  --veil-opacity: 0.86;
+
+  --header-h: 98px;
+}
+
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --page: 4 6 11;
+  --panel: 7 11 20;
+  --panel-2: 11 17 32;
+
+  --fg: 255 255 255;
+  --fg-2: 216 226 240;
+  --fg-3: 160 173 194;
+  --fg-4: 116 129 152;
+
+  --line: 255 255 255;
+  --line-opacity: 0.11;
+  --line-strong-opacity: 0.2;
+
+  --tint: 255 255 255;
+
+  --brand: 11 100 252;
+  --brand-2: 2 179 249;
+  --brand-mid: 5 145 244;
+
+  --accent-ink: 122 213 253;
+
+  --logo-cyan: #02b3f9;
+  --logo-blue: #0b64fc;
+  --logo-blue-2: #0591f4;
+
+  /* massa das ilustrações — ver a explicação no bloco do tema claro */
+  --m-air: color-mix(in srgb, rgb(var(--fg)) 6%, rgb(var(--page)));
+  --m-far: color-mix(in srgb, rgb(var(--fg)) 12%, rgb(var(--page)));
+  --m-mid: color-mix(in srgb, rgb(var(--fg)) 18%, rgb(var(--page)));
+  --m-body: color-mix(in srgb, rgb(var(--fg)) 25%, rgb(var(--page)));
+  --m-near: color-mix(in srgb, rgb(var(--fg)) 34%, rgb(var(--page)));
+  --m-deep: color-mix(in srgb, rgb(var(--fg)) 46%, rgb(var(--page)));
+  --m-ink: color-mix(in srgb, rgb(var(--fg)) 62%, rgb(var(--page)));
+  --m-void: color-mix(in srgb, #000 78%, rgb(var(--page)));
+  --m-lift: color-mix(in srgb, rgb(var(--fg)) 82%, rgb(var(--page)));
+
+  --glow-a: radial-gradient(circle, rgba(11, 100, 252, 0.34) 0%, rgba(11, 100, 252, 0.08) 48%, transparent 70%);
+  --glow-b: radial-gradient(circle, rgba(2, 179, 249, 0.3) 0%, rgba(2, 179, 249, 0.06) 50%, transparent 72%);
+  --glow-core: radial-gradient(circle, rgba(2, 179, 249, 0.5) 0%, rgba(11, 100, 252, 0.24) 45%, transparent 72%);
+  --glow-band: radial-gradient(ellipse at center, rgba(11, 100, 252, 0.2) 0%, transparent 66%);
+  --glow-panel: radial-gradient(120% 140% at 12% 0%, rgba(11, 100, 252, 0.26) 0%, transparent 58%);
+
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 18px 48px -24px rgba(0, 0, 0, 0.75);
+  --shadow-lift: 0 24px 60px -28px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.07);
+  --shadow-header: 0 10px 40px -24px rgba(0, 0, 0, 0.9);
+
+  --veil: 4 6 11;
+  --veil-opacity: 0.82;
+}
+
+:root {
+  /* Tipografia — carregada via Fontsource em src/app/layout.tsx
+     (arquivos woff2 do próprio domínio, sem Google Fonts). */
+  --font-display: 'Sora Variable', 'Sora';
+  --font-sans: 'Inter Variable', 'Inter';
+}
+
+/* ==========================================================================
+   BASE
+   ========================================================================== */
+/* Rede de segurança para navegadores sem `color-mix` (anteriores a 2023):
+   a massa volta a ser alfa sobre a página. Perde a opacidade real (volumes
+   sobrepostos ficam translúcidos), mas a ilustração continua legível. */
+@supports not (color: color-mix(in srgb, red, blue)) {
+  [data-theme='light'],
+  [data-theme='dark'],
+  :root {
+    --m-air: rgb(var(--fg) / 0.05);
+    --m-far: rgb(var(--fg) / 0.11);
+    --m-mid: rgb(var(--fg) / 0.18);
+    --m-body: rgb(var(--fg) / 0.26);
+    --m-near: rgb(var(--fg) / 0.36);
+    --m-deep: rgb(var(--fg) / 0.5);
+    --m-ink: rgb(var(--fg) / 0.68);
+    --m-void: rgb(0 0 0 / 0.55);
+    --m-lift: rgb(var(--fg) / 0.8);
+  }
+}
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    /* Duas omissões deliberadas aqui:
+       1. `scroll-behavior: smooth` — a rolagem suave nativa briga com o
+          ScrollSmoother e deixa a posição dessincronizada.
+       2. `scroll-padding-top` — somava com o `scroll-mt-*` das seções e o
+          destino ficava 92px abaixo do lugar certo.
+       A navegação por âncoras é tratada em
+       src/components/layout/AnchorScroll.tsx. */
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    /* Corpo em 17px: um degrau acima do padrão de 16px.
+       Não mexemos no font-size do <html> de propósito — todo o site usa `rem`,
+       e alterar a raiz mudaria também paddings e alturas calculadas em rem. */
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    background-color: rgb(var(--page));
+    color: rgb(var(--fg-2));
+    font-family: var(--font-sans), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    overflow-x: hidden;
+    transition:
+      background-color 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+      color 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display), system-ui, sans-serif;
+    font-weight: 600;
+    color: rgb(var(--fg));
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Foco visível e consistente — acessibilidade por teclado */
+  :focus-visible {
+    outline: 2px solid rgb(var(--brand-2));
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+
+  ::selection {
+    background: rgb(var(--brand-2) / 0.26);
+    color: rgb(var(--fg));
+  }
+
+  /* Scrollbar discreta (desktop) */
+  @media (pointer: fine) {
+    ::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgb(var(--page));
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgb(var(--tint) / 0.2);
+      border-radius: 99px;
+      border: 3px solid rgb(var(--page));
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgb(var(--brand-2) / 0.5);
+    }
+  }
+
+  /* Evita que campos de formulário no iOS disparem zoom */
+  input,
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+}
+
+/* ==========================================================================
+   COMPONENTES UTILITÁRIOS
+   ========================================================================== */
+@layer components {
+  .shell {
+    width: 100%;
+    max-width: 1240px;
+    margin-inline: auto;
+    padding-inline: clamp(1.25rem, 4vw, 2.5rem);
+  }
+
+  /* Texto com gradiente da marca.
+     No tema claro o ciano puro perde contraste sobre branco, então o gradiente
+     começa e termina em azuis mais fechados. */
+  .text-gradient-brand {
+    background: linear-gradient(
+      96deg,
+      rgb(var(--brand)) 0%,
+      rgb(var(--brand-mid)) 48%,
+      rgb(var(--brand-2)) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  [data-theme='light'] .text-gradient-brand {
+    background: linear-gradient(96deg, #0b3fd0 0%, #0b64fc 46%, #0288d1 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Etiqueta de seção */
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem; /* 13px — subiu de 11px */
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgb(var(--accent-ink));
+  }
+
+  /* Superfície de card padrão */
+  .surface {
+    background: rgb(var(--panel));
+    border: 1px solid rgb(var(--line) / var(--line-opacity));
+    border-radius: 18px;
+    box-shadow: var(--shadow-card);
+  }
+
+  [data-theme='dark'] .surface {
+    background:
+      linear-gradient(180deg, rgb(var(--tint) / 0.045) 0%, rgb(var(--tint) / 0.014) 100%),
+      rgb(var(--panel));
+  }
+
+  /* Borda com gradiente (cards em destaque) */
+  .surface-gradient-border {
+    position: relative;
+    background: rgb(var(--panel));
+    border-radius: 18px;
+    box-shadow: var(--shadow-card);
+  }
+  .surface-gradient-border::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      140deg,
+      rgb(var(--brand-2) / 0.55),
+      rgb(var(--brand) / 0.16) 45%,
+      rgb(var(--tint) / 0.05)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  /* Fundo em grade técnica com fade radial */
+  .bg-tech-grid {
+    background-image: linear-gradient(to right, rgb(var(--tint) / 0.055) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(var(--tint) / 0.055) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, #000 20%, transparent 78%);
+    mask-image: radial-gradient(120% 90% at 50% 0%, #000 20%, transparent 78%);
+  }
+
+  /* Divisor luminoso */
+  .hairline {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgb(var(--brand-2) / 0.45) 22%,
+      rgb(var(--brand) / 0.45) 62%,
+      transparent
+    );
+  }
+
+  /* Brilhos decorativos — definidos por tema para não estourar no claro */
+  .glow-a {
+    background: var(--glow-a);
+  }
+  .glow-b {
+    background: var(--glow-b);
+  }
+  .glow-core {
+    background: var(--glow-core);
+  }
+  .glow-band {
+    background: var(--glow-band);
+  }
+  .glow-panel {
+    background: var(--glow-panel);
+  }
+
+  /* Tile de ícone dos cards de produto */
+  .icon-tile {
+    background: linear-gradient(150deg, rgb(var(--brand) / 0.14), rgb(var(--tint) / 0.02));
+  }
+  [data-theme='dark'] .icon-tile {
+    background: linear-gradient(150deg, rgb(var(--brand) / 0.2), rgb(var(--tint) / 0.02));
+  }
+
+  /* Núcleo do visual da primeira dobra */
+  .hero-core {
+    background: linear-gradient(155deg, rgb(var(--brand) / 0.12), rgb(var(--panel)));
+    box-shadow:
+      0 30px 80px -34px rgb(var(--brand-2) / 0.4),
+      inset 0 1px 0 rgb(var(--tint) / 0.1);
+  }
+  [data-theme='dark'] .hero-core {
+    background: linear-gradient(155deg, rgb(var(--brand) / 0.24), rgb(var(--page) / 0.94));
+    box-shadow:
+      0 30px 80px -30px rgb(var(--brand-2) / 0.6),
+      inset 0 1px 0 rgb(var(--tint) / 0.12);
+  }
+
+  /* Vidro do header e do painel mobile */
+  .veil {
+    background: rgb(var(--veil) / var(--veil-opacity));
+  }
+  .veil-solid {
+    background: rgb(var(--panel));
+  }
+
+  /* Máscara de fade nas bordas de carrosséis */
+  .edge-fade-x {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ==========================================================================
+   ESTADOS INICIAIS DE ANIMAÇÃO
+   Evita "flash" de conteúdo já posicionado antes do GSAP assumir.
+   A classe .js-anim é adicionada pelo JS; sem JS, tudo permanece visível.
+   ========================================================================== */
+@layer utilities {
+  html.js-anim [data-anim]:not(.is-in) {
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+
+  html.js-anim [data-anim='up']:not(.is-in) {
+    transform: translate3d(0, var(--anim-dist, 30px), 0);
+  }
+  html.js-anim [data-anim='down']:not(.is-in) {
+    transform: translate3d(0, calc(var(--anim-dist, 30px) * -1), 0);
+  }
+  html.js-anim [data-anim='left']:not(.is-in) {
+    transform: translate3d(calc(var(--anim-dist, 44px) * -1), 0, 0);
+  }
+  html.js-anim [data-anim='right']:not(.is-in) {
+    transform: translate3d(var(--anim-dist, 44px), 0, 0);
+  }
+  html.js-anim [data-anim='scale']:not(.is-in) {
+    transform: scale(var(--anim-scale, 0.94));
+  }
+  html.js-anim [data-anim='rise']:not(.is-in) {
+    transform: translate3d(0, var(--anim-dist, 44px), 0) scale(0.97);
+  }
+  html.js-anim [data-anim='clip']:not(.is-in) {
+    opacity: 1;
+    clip-path: inset(0 0 100% 0);
+  }
+
+  .will-animate {
+    will-change: transform, opacity;
+  }
+
+  /* Transformação em SVG relativa à PRÓPRIA forma.
+     Sem isto, uma animação CSS de `scale`/`translate` num elemento SVG usa a
+     origem (0,0) do viewBox — a chama sairia voando para o canto em vez de
+     tremular no lugar. Usado pelas peças com movimento próprio das cenas
+     (chama, fumaça, roda). Ver src/components/story/sceneParts.tsx. */
+  .fill-box {
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+
+  /* Altura de viewport ESTÁVEL em mobile.
+     Usamos `svh` e não `dvh`: `dvh` muda de valor quando a barra de endereço
+     aparece ou desaparece, e também quando a rolagem do body é travada (menu
+     aberto). Isso deslocava o layout em ~100px e a navegação por âncora parava
+     antes do alvo. `svh` é fixo. */
+  .min-h-screen-dvh {
+    min-height: 100vh;
+  }
+  .h-screen-dvh {
+    height: 100vh;
+  }
+  @supports (min-height: 100svh) {
+    .min-h-screen-dvh {
+      min-height: 100svh;
+    }
+    .h-screen-dvh {
+      height: 100svh;
+    }
+  }
+}
+
+/* ==========================================================================
+   ACESSIBILIDADE — MOVIMENTO REDUZIDO
+   ==========================================================================
+   O modo é decidido pelo script em src/app/layout.tsx e gravado em
+   `data-motion` no <html>. Ver src/hooks/useReducedMotion.ts.
+   ========================================================================== */
+
+html[data-motion='reduced'] *,
+html[data-motion='reduced'] *::before,
+html[data-motion='reduced'] *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* As peças INTERNAS das ilustrações só têm a visibilidade forçada.
+   `transform` e `filter` ficam de fora de propósito: num SVG o atributo
+   `transform` é mapeado para a propriedade CSS, então `transform: none`
+   arrancava cada grupo do seu lugar e jogava tudo no canto (0,0) — o selo de
+   proteção aparecia fora da cena. `filter: none` apagava o brilho e a névoa. */
+html[data-motion='reduced'] [data-scene-fill],
+html[data-motion='reduced'] [data-scene-risk],
+html[data-motion='reduced'] [data-scene-shield],
+html[data-motion='reduced'] [data-scene-orbit] {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+html[data-motion='reduced'] [data-anim],
+html[data-motion='reduced'] [data-chapter],
+html[data-motion='reduced'] [data-scene],
+html[data-motion='reduced'] [data-text],
+html[data-motion='reduced'] [data-heading],
+html[data-motion='reduced'] [data-heading-rest],
+html[data-motion='reduced'] [data-hero],
+html[data-motion='reduced'] [data-hero] > *,
+html[data-motion='reduced'] [data-step],
+html[data-motion='reduced'] [data-step-item],
+html[data-motion='reduced'] [data-step-panel],
+html[data-motion='reduced'] [data-reveal-item] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  transform: none !important;
+  filter: none !important;
+  clip-path: none !important;
+}
+
+/* Peças com movimento próprio (chama, chuva, fumaça, roda): param de vez,
+   mas continuam visíveis — sem isto o CSS acima as deixaria no último
+   quadro do keyframe, que é justamente `opacity: 0`. */
+html[data-motion='reduced'] [data-scene-live] {
+  animation: none !important;
+  opacity: 1 !important;
+}
+
+/* A narrativa deixa de ser fixada e passa a ser uma lista vertical. */
+html[data-motion='reduced'] [data-story-stage] {
+  height: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem;
+  padding-block: 2.5rem;
+}
+
+html[data-motion='reduced'] [data-chapter] {
+  position: relative;
+  height: auto;
+  inset: auto;
+  padding-inline: clamp(1.25rem, 4vw, 2.5rem);
+}
+
+html[data-motion='reduced'] [data-story-rail] {
+  display: none;
+}
+
+/* Rede de segurança para quem navega SEM JavaScript. */
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion]) *,
+  html:not([data-motion]) *::before,
+  html:not([data-motion]) *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* ==========================================================================
+   ScrollSmoother — wrapper obrigatório
+   ========================================================================== */
+#smooth-wrapper {
+  position: relative;
+}
