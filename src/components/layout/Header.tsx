@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { gsap, useGSAP, ScrollTrigger } from '@/lib/gsap';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
-import { mainNav } from '@/config/navigation';
+import { mainNav, calculadoraNav, calculadoraLabelCurto } from '@/config/navigation';
 import { CTA } from '@/config/site';
 import { whatsappUrl } from '@/lib/whatsapp';
 import { track } from '@/lib/analytics';
@@ -154,7 +154,9 @@ export function Header() {
       >
         <div
           className={cn(
-            'shell flex items-center justify-between gap-6 transition-[height] duration-500 ease-brand',
+            /* Folga de 16px entre logo, menu e ações. Com 24px a soma dos três
+               blocos passava dos 1160px úteis da `shell` em 1440px. */
+            'shell flex items-center justify-between gap-4 transition-[height] duration-500 ease-brand',
             scrolled ? 'h-[76px]' : 'h-[98px]',
           )}
         >
@@ -162,17 +164,25 @@ export function Header() {
             <Logo height={scrolled ? 40 : 48} animatable />
           </div>
 
-          {/* navegação desktop */}
-          <nav aria-label="Navegação principal" className="hidden items-center gap-1 lg:flex">
+          {/* Navegação desktop — a partir de 1280px (xl), não de 1024px (lg).
+              Os seis itens do menu ocupam cerca de 600px; somados à logo, ao
+              seletor de tema, ao atalho da calculadora e ao CTA, passavam dos
+              944px úteis da `shell` em 1024px e o último item era cortado.
+              Entre 1024px e 1279px vale o menu lateral, que cabe sempre e não
+              esconde nenhum item. */}
+          <nav
+            aria-label="Navegação principal"
+            className="hidden items-center gap-0.5 xl:flex"
+          >
             {mainNav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 data-header-item
-                className="group relative rounded-full px-3.5 py-2 text-[.96875rem] font-medium text-fg-2 transition-colors duration-300 hover:text-fg"
+                className="group relative whitespace-nowrap rounded-full px-2.5 py-2 text-[.9375rem] font-medium text-fg-2 transition-colors duration-300 hover:text-fg"
               >
                 {item.label}
-                <span className="pointer-events-none absolute inset-x-3.5 bottom-1 h-[1.5px] origin-left scale-x-0 rounded-full bg-brand-gradient transition-transform duration-400 ease-brand group-hover:scale-x-100" />
+                <span className="pointer-events-none absolute inset-x-2.5 bottom-1 h-[1.5px] origin-left scale-x-0 rounded-full bg-brand-gradient transition-transform duration-400 ease-brand group-hover:scale-x-100" />
               </Link>
             ))}
           </nav>
@@ -182,19 +192,30 @@ export function Header() {
               <ThemeToggle />
             </div>
 
-            {wa && (
-              <a
-                data-header-item
-                href={wa}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={() => track('whatsapp_click', { placement: 'header' })}
-                aria-label="Falar no WhatsApp"
-                className="hidden h-11 w-11 place-items-center rounded-full border border-hair text-fg-2 transition-all duration-300 ease-brand hover:border-brand-2/55 hover:text-fg sm:grid"
-              >
-                <Icon name="whatsapp" size={19} />
-              </a>
-            )}
+            {/* Atalho da calculadora de bônus.
+                Ocupa o lugar que era do botão redondo de WhatsApp, a pedido do
+                cliente. O WhatsApp continua no botão flutuante da página e no
+                menu mobile — só saiu daqui.
+                A partir de 768px o botão mostra ícone + rótulo curto; entre
+                640px e 767px, onde o CTA principal já disputa cada pixel com a
+                logo, ele fica só com o ícone. O `aria-label` completo vale nos
+                dois casos, então leitor de tela e busca por voz sempre
+                anunciam a função inteira. Abaixo de 640px o atalho vive no
+                menu lateral. */}
+            <Link
+              data-header-item
+              href={calculadoraNav.href}
+              aria-label={calculadoraNav.label}
+              onClick={() =>
+                track('cta_click', { placement: 'header', label: calculadoraNav.label })
+              }
+              className="hidden h-11 w-11 items-center justify-center gap-2 rounded-full border border-hair text-fg-2 transition-all duration-300 ease-brand hover:border-brand-2/55 hover:text-fg sm:inline-flex md:w-auto md:px-4"
+            >
+              <Icon name="percent" size={19} className="shrink-0" />
+              <span aria-hidden="true" className="hidden text-[.9375rem] font-medium md:inline">
+                {calculadoraLabelCurto}
+              </span>
+            </Link>
 
             <div data-header-item className="hidden sm:block">
               <LinkButton
@@ -215,7 +236,7 @@ export function Header() {
               aria-expanded={open}
               aria-controls="menu-mobile"
               aria-label={open ? 'Fechar menu' : 'Abrir menu'}
-              className="relative grid h-11 w-11 place-items-center rounded-full border border-hair text-fg transition-colors duration-300 hover:border-brand-2/55 lg:hidden"
+              className="relative grid h-11 w-11 place-items-center rounded-full border border-hair text-fg transition-colors duration-300 hover:border-brand-2/55 xl:hidden"
             >
               <span className="relative block h-[14px] w-[19px]">
                 {[0, 1, 2].map((i) => (
@@ -250,7 +271,7 @@ export function Header() {
       <div
         ref={panelRef}
         id="menu-mobile"
-        className="invisible fixed inset-0 z-[60] opacity-0 lg:hidden"
+        className="invisible fixed inset-0 z-[60] opacity-0 xl:hidden"
         aria-hidden={!open}
       >
         <button
@@ -308,6 +329,30 @@ export function Header() {
                   </Link>
                 </li>
               ))}
+
+              {/* Calculadora de bônus: entra destacada, com ícone no lugar da
+                  numeração decorativa, para não se confundir com as âncoras da
+                  home — é uma página própria. */}
+              <li data-mobile-item className="mt-2 border-t border-hair pt-2">
+                <Link
+                  href={calculadoraNav.href}
+                  tabIndex={open ? 0 : -1}
+                  onClick={() => {
+                    setOpen(false);
+                    track('cta_click', {
+                      placement: 'menu_mobile',
+                      label: calculadoraNav.label,
+                    });
+                  }}
+                  className="flex items-center justify-between rounded-2xl px-4 py-4 text-[1.125rem] font-medium text-fg transition-colors duration-300 active:bg-tint/8"
+                >
+                  <span className="flex items-center gap-3">
+                    <Icon name="percent" size={17} className="shrink-0 text-accent-ink" />
+                    {calculadoraNav.label}
+                  </span>
+                  <Icon name="chevron-right" size={16} className="text-fg-4" />
+                </Link>
+              </li>
             </ul>
           </nav>
 

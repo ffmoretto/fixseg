@@ -44,8 +44,15 @@ export async function Blog() {
                   <Wrapper
                     href={href}
                     {...(external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                    className="group/post surface flex h-full flex-col overflow-hidden transition-[transform,border-color] duration-500 ease-brand hover:-translate-y-1.5 hover:border-brand-2/35"
+                    className="group/post surface relative flex h-full flex-col overflow-hidden transition-[transform,border-color,box-shadow] duration-500 ease-brand hover:-translate-y-1.5 hover:border-brand-2/35 hover:shadow-glow focus-visible:-translate-y-1.5 focus-visible:border-brand-2/35 active:translate-y-0 active:scale-[.99] active:duration-[90ms]"
                   >
+                    {/* Só CSS aqui: esta seção é Server Component, sem estado no
+                        navegador. `:hover`, `:focus-visible` e `:active` dão a
+                        resposta completa sem trazer JavaScript para a página. */}
+                    <span
+                      aria-hidden="true"
+                      className="sheen-layer z-[2] group-hover/post:animate-sheen-pass"
+                    />
                     <div className="relative aspect-[16/10] overflow-hidden bg-panel-2">
                       {post.cover ? (
                         <Image
@@ -84,7 +91,7 @@ export async function Blog() {
                         <Icon
                           name="arrow-right"
                           size={15}
-                          className="ml-auto text-fg-4 transition-all duration-300 ease-brand group-hover/post:translate-x-1 group-hover/post:text-accent-ink"
+                          className="ml-auto text-fg-4 transition-all duration-300 ease-brand group-hover/post:translate-x-1.5 group-hover/post:text-accent-ink group-active/post:translate-x-2.5"
                         />
                       </div>
                     </div>
@@ -96,8 +103,18 @@ export async function Blog() {
         ) : (
           /* estado honesto: os temas que serão publicados, sem artigos fictícios */
           <Reveal anim="up" className="mt-14">
-            <div className="surface flex flex-col gap-8 p-8 md:flex-row md:items-center md:justify-between md:p-11">
-              <div className="max-w-[46ch]">
+            <div className="surface relative flex flex-col gap-8 overflow-hidden p-8 md:flex-row md:items-center md:justify-between md:p-11">
+              {/* O brilho aqui é fixo. Ele chegou a derivar e foi CORTADO: cada
+                  peça desfocada em movimento é uma camada grande viva o tempo
+                  todo, e o conjunto delas custava quadro na CPU 4× mais lenta.
+                  Ficaram em movimento as que aparecem cedo e por mais tempo — a
+                  primeira dobra, os diferenciais, o "como funciona", a cotação e
+                  a faixa de patrimônio. */}
+              <span
+                aria-hidden="true"
+                className="glow-a pointer-events-none absolute -left-20 -top-24 h-64 w-64 rounded-full opacity-60 blur-[70px]"
+              />
+              <div className="relative max-w-[46ch]">
                 <span className="eyebrow">
                   <Icon name="clock" size={13} />
                   Em preparação
@@ -111,11 +128,11 @@ export async function Blog() {
                 </p>
               </div>
 
-              <ul className="flex flex-wrap gap-2 md:max-w-[22rem]">
+              <ul className="relative flex flex-wrap gap-2 md:max-w-[22rem]">
                 {postCategories.map((cat) => (
                   <li
                     key={cat}
-                    className="rounded-full border border-hair bg-tint/[.035] px-3.5 py-2 text-[.9375rem] text-fg-3"
+                    className="rounded-full border border-hair bg-tint/[.035] px-3.5 py-2 text-[.9375rem] text-fg-3 transition-[transform,border-color,color] duration-500 ease-brand hover:-translate-y-[3px] hover:border-brand-2/40 hover:text-fg-2"
                   >
                     {cat}
                   </li>

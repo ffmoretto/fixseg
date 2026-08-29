@@ -9,6 +9,11 @@ import Icon from '@/components/icons';
 import SectionHeading from '@/components/ui/SectionHeading';
 import { LinkButton } from '@/components/ui/Button';
 
+/* Compassos desencontrados para a deriva dos ícones — derivados do índice, sem
+   `Math.random()`, que divergiria entre servidor e navegador. */
+const stepDelays = ['0s', '-3.1s', '-1.4s', '-4.6s', '-2.2s'];
+const stepDurations = ['7.4s', '8.9s', '6.6s', '9.3s', '7.9s'];
+
 /**
  * Timeline animada de 5 etapas.
  * A linha que conecta as etapas é um SVG desenhado conforme o scroll
@@ -28,29 +33,46 @@ export function HowItWorks() {
 
       const items = el.querySelectorAll<HTMLElement>('[data-step]');
       const progress = el.querySelector('[data-step-progress]');
+      const head = el.querySelector<HTMLElement>('[data-step-head]');
+      const track = el.querySelector<HTMLElement>('[data-step-track]');
 
       if (reduced) {
         gsap.set(items, { opacity: 1, y: 0 });
         if (progress) gsap.set(progress, { scaleY: 1 });
+        /* a ponta luminosa não tem para onde ir sem scroll: some de vez */
+        if (head) gsap.set(head, { opacity: 0 });
+        el.querySelectorAll('[data-step-dot]').forEach((d) => d.classList.add('is-lit'));
         return;
       }
 
-      /* linha de progresso atrelada ao scroll */
+      /* Linha de progresso atrelada ao scroll, com a ponta luminosa viajando na
+         frente do traço como a brasa de um pavio.
+
+         As duas ficam numa timeline ÚNICA, com um gatilho só. Cada
+         ScrollTrigger registrado é trabalho em todo quadro de rolagem da página
+         inteira, não apenas desta seção — dois gatilhos com exatamente o mesmo
+         início, fim e scrub custam o dobro e entregam o mesmo resultado.
+
+         A ponta é um elemento separado, movido por `y`: filho da barra ela
+         seria esticada junto com o `scaleY` e chegaria embaixo achatada num
+         risco. */
       const lineTween = progress
-        ? gsap.fromTo(
-            progress,
-            { scaleY: 0 },
-            {
-              scaleY: 1,
-              ease: 'none',
+        ? gsap
+            .timeline({
               scrollTrigger: {
                 trigger: el.querySelector('[data-step-list]'),
                 start: 'top 72%',
                 end: 'bottom 72%',
                 scrub: 0.5,
               },
-            },
-          )
+            })
+            .fromTo(progress, { scaleY: 0 }, { scaleY: 1, ease: 'none' }, 0)
+            .fromTo(
+              head && track ? head : [],
+              { y: 0 },
+              { y: () => (track ? track.offsetHeight : 0), ease: 'none' },
+              0,
+            )
         : null;
 
       /* cada etapa entra individualmente */
@@ -70,7 +92,12 @@ export function HowItWorks() {
         ),
       );
 
-      /* número e ícone reagem quando a etapa fica ativa */
+      /* Número e ícone reagem quando a etapa fica ativa — e é aqui, no gatilho
+         que já existe, que o marcador acende. Acender era um ScrollTrigger a
+         mais por etapa (cinco no total) fazendo exatamente a mesma pergunta que
+         este; agora é uma linha no `onStart`, de graça.
+         O aceso é uma CLASSE e não uma tween: envolve cor, borda e sombra, e é
+         o CSS que sabe traduzir isso nos dois temas. */
       const dots = Array.from(el.querySelectorAll<HTMLElement>('[data-step-dot]')).map((dot) =>
         gsap.fromTo(
           dot,
@@ -80,6 +107,7 @@ export function HowItWorks() {
             opacity: 1,
             duration: 0.6,
             ease: 'snap',
+            onStart: () => dot.classList.add('is-lit'),
             scrollTrigger: { trigger: dot, start: 'top 82%', once: true },
           },
         ),
@@ -107,11 +135,16 @@ export function HowItWorks() {
         aria-hidden="true"
         className="pointer-events-none absolute inset-0 -z-10"
       >
+        {/* Dois níveis de propósito: o de fora é o que o ScrollSmoother move
+            pelo `data-speed`, o de dentro é o que deriva sozinho. Numa div só,
+            a animação CSS de `transform` sobrescreveria o transform que o
+            parallax escreve, e o brilho ficaria parado no scroll. */}
         <div
           data-speed="0.9"
-          className="glow-band absolute left-1/2 top-0 h-[52vw] max-h-[620px] w-[92vw] max-w-[1100px] -translate-x-1/2 opacity-55 blur-[100px]"
-          
-        />
+          className="absolute left-1/2 top-0 h-[52vw] max-h-[620px] w-[92vw] max-w-[1100px] -translate-x-1/2"
+        >
+          <div className="glow-band absolute inset-0 animate-drift-a opacity-55 blur-[100px]" />
+        </div>
       </div>
 
       <div className="shell">
@@ -127,6 +160,7 @@ export function HowItWorks() {
         <div data-step-list className="relative mx-auto mt-16 max-w-[58rem] lg:mt-20">
           {/* trilha */}
           <div
+            data-step-track
             aria-hidden="true"
             className="absolute bottom-6 left-[26px] top-6 w-[2px] md:left-1/2 md:-translate-x-1/2"
           >
@@ -135,6 +169,11 @@ export function HowItWorks() {
               data-step-progress
               className="absolute inset-0 origin-top rounded-full bg-brand-gradient"
               style={{ transform: 'scaleY(0)' }}
+            />
+            {/* ponta luminosa que viaja na frente do traço */}
+            <span
+              data-step-head
+              className="absolute -left-[3px] top-0 h-2 w-2 rounded-full bg-brand-2 shadow-[0_0_16px_4px_rgba(2,179,249,.55)]"
             />
           </div>
 
@@ -150,9 +189,18 @@ export function HowItWorks() {
                   {/* marcador */}
                   <span
                     data-step-dot
-                    className="absolute left-0 top-0 z-10 grid h-[54px] w-[54px] place-items-center rounded-2xl border border-hair bg-panel text-accent-ink shadow-[0_10px_30px_-16px_rgba(0,0,0,.9)] md:left-1/2 md:top-1/2 md:h-[58px] md:w-[58px] md:-translate-x-1/2 md:-translate-y-1/2"
+                    className="step-dot absolute left-0 top-0 z-10 grid h-[54px] w-[54px] place-items-center rounded-2xl border border-hair bg-panel text-accent-ink shadow-[0_10px_30px_-16px_rgba(0,0,0,.9)] md:left-1/2 md:top-1/2 md:h-[58px] md:w-[58px] md:-translate-x-1/2 md:-translate-y-1/2"
                   >
-                    <Icon name={step.icon} size={24} />
+                    {/* deriva desencontrada: o compasso vem do índice da etapa */}
+                    <span
+                      className="block animate-icon-drift"
+                      style={{
+                        animationDelay: stepDelays[i % stepDelays.length],
+                        animationDuration: stepDurations[i % stepDurations.length],
+                      }}
+                    >
+                      <Icon name={step.icon} size={24} />
+                    </span>
                   </span>
 
                   {/* conteúdo */}

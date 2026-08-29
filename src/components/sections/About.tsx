@@ -54,12 +54,14 @@ export function About() {
               <RevealItem
                 key={pillar.title}
                 anim="left"
-                className="group/p surface flex items-start gap-5 p-6 transition-[border-color,transform] duration-500 ease-brand hover:-translate-x-1 hover:border-brand-2/35"
+                className="group/p surface relative flex items-start gap-5 overflow-hidden p-6 transition-[border-color,transform,box-shadow] duration-500 ease-brand hover:-translate-x-1 hover:border-brand-2/35 hover:shadow-lift focus-within:-translate-x-1 focus-within:border-brand-2/35"
               >
-                <span className="mt-0.5 font-mono text-[.875rem] font-semibold text-accent-ink/60">
+                {/* reflexo que atravessa o pilar quando o cursor entra */}
+                <span aria-hidden="true" className="sheen-layer group-hover/p:animate-sheen-pass" />
+                <span className="relative mt-0.5 font-mono text-[.875rem] font-semibold text-accent-ink/60 transition-colors duration-500 group-hover/p:text-accent-ink">
                   0{i + 1}
                 </span>
-                <div>
+                <div className="relative">
                   <h3 className="font-display text-[1.125rem] font-semibold text-fg">
                     {pillar.title}
                   </h3>
@@ -68,7 +70,7 @@ export function About() {
                 <Icon
                   name="arrow-up-right"
                   size={17}
-                  className="ml-auto mt-0.5 shrink-0 text-fg-4/55 transition-all duration-500 ease-brand group-hover/p:translate-x-1 group-hover/p:text-accent-ink"
+                  className="relative ml-auto mt-0.5 shrink-0 text-fg-4/55 transition-all duration-500 ease-brand group-hover/p:-translate-y-1 group-hover/p:translate-x-1 group-hover/p:text-accent-ink"
                 />
               </RevealItem>
             ))}
@@ -78,10 +80,21 @@ export function About() {
           {visibleStats.length > 0 && (
             <Reveal
               stagger={0.08}
-              className="mt-2 grid grid-cols-2 gap-4 rounded-3xl border border-hair bg-tint/[.025] p-6"
+              className="relative mt-2 grid grid-cols-2 gap-4 overflow-hidden rounded-3xl border border-hair bg-tint/[.025] p-6"
             >
+              {/* Brilho fixo atrás dos números. A deriva foi cortada na
+                  medição; o que dá vida ao painel depois da contagem é o
+                  assentamento e o brilho que atravessa cada número. */}
+              <span
+                aria-hidden="true"
+                className="glow-b pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full opacity-60 blur-[54px]"
+              />
               {visibleStats.map((s) => (
-                <RevealItem key={s.label} anim="scale" className="text-left">
+                <RevealItem
+                  key={s.label}
+                  anim="scale"
+                  className="group/stat relative text-left transition-transform duration-500 ease-brand hover:-translate-y-1"
+                >
                   <p className="font-display text-display-sm font-semibold text-fg">
                     <Counter
                       value={s.value as number}
@@ -90,7 +103,7 @@ export function About() {
                       className="text-gradient-brand"
                     />
                   </p>
-                  <p className="mt-1.5 text-[.875rem] font-medium uppercase tracking-[0.12em] text-fg-4">
+                  <p className="mt-1.5 text-[.875rem] font-medium uppercase tracking-[0.12em] text-fg-4 transition-colors duration-500 group-hover/stat:text-fg-3">
                     {s.label}
                   </p>
                 </RevealItem>
@@ -103,10 +116,11 @@ export function About() {
       {/* faixa de CTA */}
       <div className="shell mt-20">
         <Reveal anim="rise" className="surface-gradient-border relative overflow-hidden">
+          {/* Folga de 8% em volta: o gradiente deriva alguns pixels, e sem a
+              folga a borda oposta abriria uma faixa vazia dentro do cartão. */}
           <div
             aria-hidden="true"
-            className="glow-panel pointer-events-none absolute inset-0 opacity-80"
-            
+            className="glow-panel pointer-events-none absolute -inset-[8%] animate-drift-a opacity-80"
           />
           <div className="relative flex flex-col items-start justify-between gap-7 p-8 md:flex-row md:items-center md:p-11">
             <div>

@@ -47,7 +47,18 @@ export function Contact() {
   const address = formattedAddress();
   const maps = mapsUrl();
 
-  const channels: { icon: IconName; label: string; value: string; href?: string; external?: boolean }[] =
+  /* `wide` = o cartão ocupa a linha inteira. E-mail e endereço são longos: em
+     meia largura o e-mail quebrava no meio da palavra ("...com.b / r") e o
+     endereço virava cinco linhas. WhatsApp e telefone são curtos e ficam lado
+     a lado. */
+  const channels: {
+    icon: IconName;
+    label: string;
+    value: string;
+    href?: string;
+    external?: boolean;
+    wide?: boolean;
+  }[] =
     [
       wa && site.contact.whatsapp
         ? {
@@ -65,7 +76,7 @@ export function Contact() {
         ? { icon: 'phone', label: 'Telefone', value: site.contact.phone, href: tel }
         : null,
       mail && site.contact.email
-        ? { icon: 'mail', label: 'E-mail', value: site.contact.email, href: mail }
+        ? { icon: 'mail', label: 'E-mail', value: site.contact.email, href: mail, wide: true }
         : null,
       address
         ? {
@@ -74,6 +85,7 @@ export function Contact() {
             value: address,
             href: maps ?? undefined,
             external: !!maps,
+            wide: true,
           }
         : null,
     ].filter(Boolean) as never;
@@ -143,9 +155,16 @@ export function Contact() {
 
   return (
     <section id="contato" className="relative scroll-mt-24 py-section">
-      <div className="shell grid gap-12 lg:grid-cols-[.9fr_1.1fr] lg:gap-16">
+      {/* Duas colunas de MESMA largura e mesma altura.
+          Antes eram .9fr/1.1fr com alinhamento ao topo: a coluna da esquerda
+          (título + quatro canais empilhados + horários) ficava ~250px mais
+          alta que o formulário, e a seção terminava com um bloco vazio no
+          canto inferior direito. Agora os canais ocupam duas colunas, o
+          formulário estica até o fim da linha e as duas colunas fecham na
+          mesma altura. */}
+      <div className="shell grid items-stretch gap-12 lg:grid-cols-2 lg:gap-14">
         {/* informações */}
-        <div>
+        <div className="flex flex-col">
           <SectionHeading
             eyebrow="Contato"
             title="Fale com quem entende do seu risco"
@@ -154,7 +173,7 @@ export function Contact() {
           />
 
           {channels.length > 0 && (
-            <Reveal stagger={0.08} className="mt-10 flex flex-col gap-3">
+            <Reveal stagger={0.08} className="mt-10 grid gap-3 sm:grid-cols-2">
               {channels.map((c) => {
                 const inner = (
                   <>
@@ -165,7 +184,12 @@ export function Contact() {
                       <span className="block text-[.8125rem] font-semibold uppercase tracking-[0.16em] text-fg-4">
                         {c.label}
                       </span>
-                      <span className="mt-1 block break-words text-[1.0625rem] font-medium text-fg">
+                      <span
+                        className={cn(
+                          'mt-1 block font-medium text-fg',
+                          c.wide ? 'break-words text-[1rem]' : 'text-[1rem] sm:whitespace-nowrap',
+                        )}
+                      >
                         {c.value}
                       </span>
                     </span>
@@ -180,7 +204,11 @@ export function Contact() {
                 );
 
                 return (
-                  <RevealItem key={c.label} anim="left">
+                  <RevealItem
+                    key={c.label}
+                    anim="left"
+                    className={cn('min-w-0', c.wide && 'sm:col-span-2')}
+                  >
                     {c.href ? (
                       <a
                         href={c.href}
@@ -190,12 +218,12 @@ export function Contact() {
                             placement: 'contato',
                           })
                         }
-                        className="group/ch surface flex items-start gap-4 p-5 transition-[border-color,transform] duration-400 ease-brand hover:-translate-y-0.5 hover:border-brand-2/35"
+                        className="group/ch surface flex h-full items-start gap-4 p-5 transition-[border-color,transform] duration-400 ease-brand hover:-translate-y-0.5 hover:border-brand-2/35"
                       >
                         {inner}
                       </a>
                     ) : (
-                      <div className="surface flex items-start gap-4 p-5">{inner}</div>
+                      <div className="surface flex h-full items-start gap-4 p-5">{inner}</div>
                     )}
                   </RevealItem>
                 );
@@ -203,9 +231,10 @@ export function Contact() {
             </Reveal>
           )}
 
-          {/* horários */}
+          {/* horários — `lg:mt-auto` empurra o bloco para o rodapé da coluna,
+              que é o que faz as duas colunas terminarem na mesma linha. */}
           {site.hours.length > 0 && (
-            <Reveal anim="up" delay={0.1} className="mt-6">
+            <Reveal anim="up" delay={0.1} className="mt-6 lg:mt-auto lg:pt-6">
               <div className="surface p-6">
                 <p className="flex items-center gap-2 text-[.8125rem] font-semibold uppercase tracking-[0.16em] text-fg-4">
                   <Icon name="clock" size={14} className="text-accent-ink" />
@@ -257,13 +286,13 @@ export function Contact() {
         </div>
 
         {/* formulário */}
-        <Reveal anim="rise" className="min-w-0">
+        <Reveal anim="rise" className="flex min-w-0 flex-col">
           {sent?.ok ? (
             <div
               data-contact-success
               role="status"
               aria-live="polite"
-              className="surface-gradient-border relative flex flex-col items-center overflow-hidden px-7 py-14 text-center md:px-12"
+              className="surface-gradient-border relative flex h-full flex-col items-center justify-center overflow-hidden px-7 py-14 text-center md:px-12"
             >
               <div
                 aria-hidden="true"
@@ -294,7 +323,7 @@ export function Contact() {
               ref={formRef}
               onSubmit={onSubmit}
               noValidate
-              className="surface p-6 md:p-9"
+              className="surface flex h-full flex-col p-6 md:p-9"
               aria-label="Formulário de contato"
             >
               <div className="grid gap-5 sm:grid-cols-2">
@@ -349,6 +378,12 @@ export function Contact() {
                   value={form.subject}
                   onChange={(v) => setForm((f) => ({ ...f, subject: v }))}
                 />
+              </div>
+
+              {/* A mensagem fica FORA da grade para poder esticar: é ela que
+                  absorve a altura que sobra e faz o cartão fechar exatamente
+                  na mesma linha da coluna ao lado. */}
+              <div className="mt-5 flex min-h-0 flex-1 flex-col">
                 <Field
                   label="Mensagem"
                   name="message"
@@ -361,7 +396,7 @@ export function Contact() {
                   placeholder="Conte o que você precisa proteger ou qual a sua dúvida."
                   required
                   error={errors.message}
-                  full
+                  grow
                   rows={5}
                 />
               </div>

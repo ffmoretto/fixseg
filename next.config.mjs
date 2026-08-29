@@ -22,7 +22,17 @@ const nextConfig = {
   images: {
     formats: ['image/avif', 'image/webp'],
     // Adicione aqui os domínios de onde as imagens virão (ex.: Supabase Storage).
-    remotePatterns: [],
+    // Os hosts abaixo são as fotos de perfil de quem avalia a corretora no
+    // Google — a mesma lista está em src/services/googleReviews.ts
+    // (HOSTS_DE_FOTO), que descarta qualquer URL fora dela. As duas precisam
+    // combinar: o adaptador filtra, o Next autoriza.
+    remotePatterns: [
+      { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
+      { protocol: 'https', hostname: 'lh4.googleusercontent.com' },
+      { protocol: 'https', hostname: 'lh5.googleusercontent.com' },
+      { protocol: 'https', hostname: 'lh6.googleusercontent.com' },
+      { protocol: 'https', hostname: 'streetviewpixels-pa.googleapis.com' },
+    ],
   },
   experimental: {
     optimizePackageImports: ['gsap'],

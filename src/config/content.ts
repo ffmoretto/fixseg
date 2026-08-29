@@ -141,29 +141,42 @@ export const about = {
 };
 
 /* -------------------------------------------------------------------------- */
-/* SEGURADORAS PARCEIRAS                                                      */
+/* PARCEIROS DA FIXSEG (seguradoras)                                          */
 /* -------------------------------------------------------------------------- */
 
 export interface Insurer {
+  /** Nome da companhia, como deve aparecer na tela. */
   name: string;
-  /** Caminho do logo em /public/seguradoras/…  (SVG ou PNG com fundo transparente) */
-  logo: string;
+  /**
+   * Caminho do logo em /public/seguradoras/… (SVG ou PNG com fundo
+   * transparente). OPCIONAL: enquanto o arquivo não chega, a companhia aparece
+   * como cartão tipográfico, com o nome composto na fonte da marca. Basta
+   * preencher este campo depois e a imagem assume sozinha.
+   */
+  logo?: string | null;
   /** Site oficial (opcional) */
   url?: string;
 }
 
 /**
  * Adicione aqui APENAS seguradoras com as quais a corretora efetivamente
- * trabalha e cujos logos estejam autorizados. Coloque os arquivos em
- * /public/seguradoras/. Com a lista vazia, a seção não é renderizada.
+ * trabalha. Se for usar o logo, o uso da marca precisa estar autorizado e o
+ * arquivo deve ficar em /public/seguradoras/ (veja o LEIA-ME da pasta).
  *
- * Exemplo:
- * { name: 'Nome da Seguradora', logo: '/seguradoras/nome.svg', url: 'https://…' }
+ * Com a lista vazia, a seção "Parceiros da FIXSEG" NÃO é renderizada.
+ *
+ * Exemplo — o nome basta para entrar no carrossel:
+ *
+ * export const insurers: Insurer[] = [
+ *   { name: 'Nome da Seguradora' },
+ *   { name: 'Outra Seguradora', url: 'https://…' },
+ *   { name: 'Com logo', logo: '/seguradoras/com-logo.svg', url: 'https://…' },
+ * ];
  */
 export const insurers: Insurer[] = [];
 
 /* -------------------------------------------------------------------------- */
-/* DEPOIMENTOS                                                                */
+/* DEPOIMENTOS DIRETOS                                                        */
 /* -------------------------------------------------------------------------- */
 
 export interface Testimonial {
@@ -178,12 +191,19 @@ export interface Testimonial {
 }
 
 /**
- * Depoimentos reais de clientes, com autorização de uso.
- * Com a lista vazia, a seção não é renderizada — nada é inventado.
+ * A seção "O que falam de nós" é alimentada pelas AVALIAÇÕES REAIS do perfil
+ * da corretora no Google (ver src/services/googleReviews.ts e a seção 5 do
+ * README). Esta lista é a alternativa para depoimentos que chegaram FORA do
+ * Google — por e-mail, WhatsApp ou formulário — e que tenham autorização de
+ * uso por escrito.
+ *
+ * Se houver itens aqui, eles entram no mesmo carrossel, identificados como
+ * "Depoimento enviado à FIXSEG" (e não como avaliação do Google). Vazia, e sem
+ * avaliações do Google, a seção inteira não é renderizada — nada é inventado.
  */
 export const testimonials: Testimonial[] = [];
 
-/** Autoplay do carrossel de depoimentos (ms). 0 desativa. */
+/** Autoplay do carrossel de avaliações (ms). 0 desativa. */
 export const testimonialsAutoplay = 6500;
 
 /* -------------------------------------------------------------------------- */

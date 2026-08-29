@@ -94,7 +94,7 @@ site que não veio de uma fonte. Para esconder o bloco por completo, deixe a lis
 | `src/config/site.ts` | nome, contatos, endereço, CNPJ, SUSEP, redes sociais, textos dos CTAs |
 | `src/config/navigation.ts` | menu do header, links do footer, links legais |
 | `src/config/insurances.ts` | os 11 produtos: nome, descrição, coberturas, **campos do formulário de cotação** e palavras-chave de SEO |
-| `src/config/content.ts` | diferenciais, etapas do "como funciona", textos institucionais, **indicadores numéricos**, **seguradoras parceiras**, **depoimentos**, FAQ e blog |
+| `src/config/content.ts` | diferenciais, etapas do "como funciona", textos institucionais, **indicadores numéricos**, **parceiros (seguradoras)**, **depoimentos diretos**, FAQ e blog |
 | `src/config/story.ts` | roteiro da narrativa animada em scroll (capítulos, textos, produtos relacionados) |
 
 ### Itens que ficaram intencionalmente vazios
@@ -105,10 +105,16 @@ seções correspondentes **não aparecem** até serem preenchidas:
 1. **Indicadores** (`content.ts` → `stats`): clientes atendidos, anos de experiência,
    seguros contratados, seguradoras parceiras. Troque `value: null` pelo número real e o
    card entra em cena com contagem animada.
-2. **Seguradoras parceiras** (`content.ts` → `insurers`): adicione os logos autorizados em
-   `public/seguradoras/` e uma entrada `{ name, logo, url? }` por seguradora.
-3. **Depoimentos** (`content.ts` → `testimonials`): apenas depoimentos reais e com
-   autorização de uso. Com a lista vazia, o carrossel não é renderizado.
+2. **Parceiros da FIXSEG** (`content.ts` → `insurers`): uma entrada `{ name, logo?, url? }`
+   por seguradora. **O logo é opcional** — sem ele a companhia aparece como cartão
+   tipográfico, com o nome na fonte da marca, e a imagem assume sozinha quando o arquivo
+   for colocado em `public/seguradoras/` e apontado em `logo`. Com a lista vazia, a seção
+   não é renderizada.
+3. **O que falam de nós** (avaliações do Google): a seção é alimentada pelo perfil da
+   corretora no Google Meu Negócio, via Places API — veja o passo a passo na §5. Sem as
+   variáveis de ambiente configuradas, a seção não aparece. A lista `testimonials` do
+   `content.ts` continua disponível para depoimentos recebidos fora do Google, com
+   autorização de uso.
 
 Também precisam de revisão antes de publicar:
 
@@ -216,7 +222,7 @@ src/
 │   ├── layout/                   Header, Footer, WhatsAppFloat, PageLoader,
 │   │                             SmoothScroll, AnchorScroll, Analytics, LegalPage
 │   ├── sections/                 Hero, Insurances, Differentials, HowItWorks,
-│   │                             QuoteSection/QuoteForm, About, Insurers,
+│   │                             QuoteSection/QuoteForm, About, Partners,
 │   │                             Testimonials, Faq, Blog, Contact
 │   ├── story/                    narrativa animada em scroll
 │   │   ├── StoryScroll.tsx       orquestrador da timeline
@@ -229,7 +235,8 @@ src/
 ├── config/                       TODA informação editável (ver seção 1)
 ├── hooks/                        useReducedMotion, useIsMobile, useTheme
 ├── lib/                          gsap (registro central), seo, analytics, whatsapp, utils
-└── services/                     leads, adaptadores de destino, fonte de conteúdo
+└── services/                     leads, adaptadores de destino, fonte de conteúdo,
+                                  avaliações do Google (googleReviews)
 ```
 
 ---
@@ -261,12 +268,40 @@ scroll. Cada capítulo passa por três estados:
 
 1. **Construção** — o contorno da cena é desenhado (DrawSVG) e, logo atrás, a massa das
    formas materializa: a família, a casa, o veículo, a carga, a empresa ganham corpo.
-2. **Imprevisto** — os elementos de risco entram com impacto e a cena perde a cor da marca.
-3. **Proteção** — o escudo se forma, o check da FIXSEG é desenhado e a cor volta.
+2. **Imprevisto** — um clarão, o tremor, e os elementos de risco entram na ordem definida
+   por `data-risk-delay`. O ambiente escurece por um filtro na câmera, e a cor passa a vir
+   do próprio acontecimento: o fogo em âmbar, a descarga em ciano.
+3. **Proteção** — o escudo se forma, o check da FIXSEG é desenhado e a luz volta.
 
 Os seis capítulos cobrem vida, residencial, auto/caminhão/frota, transportes de carga,
 empresarial/RC/garantia/riscos diversos e o fecho. Textos e produtos relacionados de cada
 capítulo ficam em `src/config/story.ts` — para trocar o roteiro, basta editar esse arquivo.
+
+**Ritmo.** Cada capítulo consome 70% da altura da janela no desktop e 56% no celular
+(`porCapitulo`, em `StoryScroll.tsx`). Era 108% e 78%: a narrativa inteira pedia quase
+6.000px de rolagem e cansava antes do fim. A mesma quantidade de beats, menos estrada
+entre eles. Para deixar mais lento ou mais rápido, é esse número.
+
+**Câmera e parallax.** Dentro de cada cena existe uma camada `[data-scene-camera]` que
+avança devagar sobre a ilustração enquanto o capítulo corre, e cada grupo do SVG leva um
+`data-depth` (fundo perto de `0.15`, primeiro plano perto de `1`) que o orquestrador
+desloca em velocidades diferentes. As duas coisas juntas são o que tira a sensação de
+cartão parado. A câmera fica separada de `[data-scene]` porque a cena cuida da entrada e
+da saída — no mesmo elemento, uma transformação sobrescreveria a outra.
+
+**O enquadramento no celular.** O palco ocupa a janela inteira, mas o cabeçalho fica fixo
+por cima e come os primeiros ~84px. Sem compensar isso, o conteúdo se centraliza na altura
+total e o topo da cena desaparece atrás do menu — era exatamente o defeito relatado ("a
+história sobe enquanto você desce a página"). O capítulo tem `pt-[82px] pb-[64px]` no
+celular, a cena é governada pela ALTURA (`h-[26svh]`, não pela largura) para encolher
+sozinha em telas baixas, e os três parágrafos ocupam a MESMA caixa, um de cada vez: a
+timeline apaga o anterior antes de trazer o próximo. Empilhados, os três não cabiam — o
+capítulo mais longo pedia 834px numa área útil de 745px. Um pensamento por vez também
+deixa a leitura mais rápida.
+
+Existe um teste para isso: `node /home/claude/story-fit.mjs <url>` mede, em 360×640,
+390×844, 412×915 e 768×1024, quanto sobra ou falta de altura em cada capítulo. Todo valor
+precisa continuar negativo (= cabe). Rode depois de mexer no texto de qualquer capítulo.
 
 ### O kit de ilustração das cenas
 
@@ -283,9 +318,17 @@ Tudo o que elas precisam está em `src/components/story/sceneParts.tsx`:
 - **Helpers de superfície** — `mass()`, `outline()`, `detail()`, `accent()`,
   `accentStroke()` e os gradientes `volume()`, `sideFace()`, `topFace()`, `glass()`,
   `brandFill()`, `heat()`.
+- **A cor de alerta** — `--alert` / `--alert-2` (âmbar) é a **única exceção** à paleta da
+  marca em todo o site, e só aparece nas peças de fogo e perigo das cenas: chama, brasa,
+  faísca de calor, sirene. O motivo é concreto: chama em ciano não é lida como chama — nos
+  testes as labaredas azuis pareciam folhagem, e o momento do imprevisto, que é o coração
+  da narrativa, perdia força. A descarga elétrica continua ciano, que é a cor que o olho
+  espera para eletricidade. Para remover o âmbar por completo, troque os dois valores no
+  `globals.css` por `var(--brand-2)` — nada mais precisa mudar.
 - **Peças prontas** — `Air` (atmosfera), `Ground` (chão em perspectiva), `Contact`
-  (sombra que assenta a forma), `Fracture` (trinca), `Flame`, `Smoke`, `Rain`, `Wheel` e
-  `ShieldSeal`. `Air` e `Ground` usam a máscara `-edge`, que dissolve a cena na página em
+  (sombra que assenta a forma), `Fracture` (trinca), `Flame`, `Smoke`, `Rain`, `Wheel`,
+  `Sparks` (faísca), `Bolt` (descarga elétrica), `LightCone` (farol, poste, luz de janela)
+  e `ShieldSeal`. `Air` e `Ground` usam a máscara `-edge`, que dissolve a cena na página em
   vez de deixar a aresta de um "cartão colado".
 - **`SceneDefs`** — gradientes e filtros da cena. Cada cena passa um `id` único, porque
   ids de SVG são globais no documento.
@@ -299,6 +342,7 @@ Atributos que o orquestrador lê:
 | `data-scene-live` | movimento próprio em CSS (chama, chuva, fumaça, roda) |
 | `data-scene-risk` + `data-risk-delay` | o imprevisto, na ordem indicada |
 | `data-scene-shield` / `data-shield-check` | a proteção e o check final |
+| `data-depth="0.3"` | participa do parallax: 0.15 no fundo, 1 no primeiro plano |
 
 Para adicionar um capítulo: crie a cena em `story/scenes/`, registre a chave em
 `SceneKey` e no mapa `scenes` de `StoryScroll.tsx`, e acrescente a entrada em
@@ -311,7 +355,12 @@ Três armadilhas já resolvidas, que vale conhecer antes de mexer nas cenas:
    árvore por *hydration mismatch*.
 2. **Nunca cubra o assunto com forma opaca em `data-scene-risk`.** A primeira versão do
    capítulo 01 apagava a família inteira com um retângulo. Escurecer é véu translúcido.
-3. **Em movimento reduzido, não se zera `transform` de peça de SVG.** Num SVG o atributo
+3. **Nada de sobreposição com cor por cima da cena.** A penumbra do imprevisto já foi um
+   retângulo com cor chapada e depois uma vinheta radial: as duas desenhavam uma caixa
+   cinza visível em volta da ilustração, justamente o "cartão colado" que a máscara de
+   borda das cenas existe para evitar. Hoje é um filtro (`brightness`/`contrast`) na
+   camada de câmera — filtro não tem geometria, logo não tem borda.
+4. **Em movimento reduzido, não se zera `transform` de peça de SVG.** Num SVG o atributo
    `transform` é mapeado para a propriedade CSS: `transform: none` arrancava cada grupo do
    seu lugar e jogava o selo de proteção no canto do quadro. O CSS e o JS do modo reduzido
    forçam apenas visibilidade nas peças internas.
@@ -408,6 +457,67 @@ O SQL sugerido da tabela `leads` (com RLS ativo) está comentado em
 `src/services/adapters/index.ts`. O esquema de `posts` para o blog está em
 `src/services/content.ts`.
 
+### Avaliações do Google (seção "O que falam de nós")
+
+A seção é alimentada pelas **avaliações reais** do perfil da corretora no Google Meu
+Negócio, lidas pela **Places API (New)**. O caminho é o mesmo dos leads: a chave existe
+só no servidor e o componente de cliente recebe os dados já normalizados.
+
+```
+Home (Server Component) → src/services/googleReviews.ts → Places API (New)
+                                     ↓
+                    <Testimonials avaliacoes={…} />  (cliente, anima)
+```
+
+Duas variáveis, ambas **sem** `NEXT_PUBLIC_` — a chave nunca chega ao navegador:
+
+```
+GOOGLE_PLACES_API_KEY=AIza…
+GOOGLE_PLACE_ID=ChIJ…
+```
+
+**Como obter o Place ID.** Abra o [Place ID
+Finder](https://developers.google.com/maps/documentation/places/web-service/place-id),
+busque "FIXSEG Corretora de Seguros, Cascavel" e copie o identificador que começa com
+`ChIJ`. Confirme que o resultado é o perfil da corretora, não um homônimo.
+
+**Como obter a chave.** No [Google Cloud Console](https://console.cloud.google.com):
+
+1. Crie (ou selecione) um projeto e ative o faturamento — a Places API exige cartão
+   cadastrado, ainda que o uso deste site fique dentro da faixa gratuita mensal.
+2. **APIs e serviços → Biblioteca** → ative **Places API (New)**.
+3. **APIs e serviços → Credenciais → Criar credenciais → Chave de API**.
+4. **Restrinja a chave** (esta etapa não é opcional):
+   - *Restrições de API*: marque **Restringir chave** e selecione **apenas** a Places
+     API (New). Uma chave sem restrição de API serve para qualquer serviço do Google e
+     vira prejuízo se vazar.
+   - *Restrições de aplicativo*: como a chamada sai do **servidor**, e não do navegador,
+     não use restrição por referenciador HTTP. Se a hospedagem tiver IP de saída fixo,
+     restrinja por **endereço IP**; na Vercel, que não tem IP fixo no plano padrão,
+     deixe sem restrição de aplicativo e mantenha a restrição de API.
+5. Preencha as duas variáveis no `.env.local` (ou no painel da hospedagem) e refaça o
+   deploy.
+
+**Cache.** O adaptador usa `next: { revalidate: 21600 }` — uma consulta a cada seis
+horas, não uma por visita. Isso é requisito, não otimização: o Google cobra por chamada
+e devolve no máximo **5 avaliações** por consulta (limite da API, não do site). A nota
+média e o total de avaliações exibidos são os do perfil inteiro.
+
+**Sem configuração.** Sem chave, sem Place ID, com cota estourada ou com a API fora do
+ar, `fetchGoogleReviews()` devolve lista vazia, registra um aviso no log do servidor e a
+seção **não é renderizada**. Nenhuma avaliação, nota ou foto é inventada, e a página
+continua de pé.
+
+**Depoimentos fora do Google.** A lista `testimonials` em `src/config/content.ts`
+continua existindo para depoimentos que chegaram por outro canal e têm autorização de
+uso por escrito. Se houver itens lá, eles entram no mesmo carrossel, identificados como
+*"Depoimento enviado à FIXSEG"* — nunca como avaliação pública do Google.
+
+**Structured data.** `aggregateRating` e os nós `Review` só são emitidos quando há
+avaliação real vinda do Google (`reviewsSchema()` em `src/lib/seo.tsx`, um nó com o
+mesmo `@id` da organização). Nota inventada em structured data é violação das
+diretrizes do Google.
+
 ### Integrações preparadas, não ativadas
 
 Supabase, CRM, API de cotação, consulta de CNPJ, Google Analytics, Google Tag Manager e
@@ -430,7 +540,50 @@ basta condicionar a renderização de `src/components/layout/Analytics.tsx` ao a
 
 ---
 
-## 6. SEO
+## 6. A calculadora de bônus
+
+`/calculadora-bonus` — a ferramenta de atração da página. O visitante informa a
+apólice que está vencendo e recebe a classe estimada da renovação.
+
+**A regra**, isolada e testável em `src/config/bonus.ts`:
+
+```
+novaClasse = classeAtual + 1 − faixaDeAtraso − penalidadeDeSinistros
+```
+
+- `faixaDeAtraso`: blocos de 30 dias corridos entre o vencimento da apólice
+  anterior e a data da renovação. Até 30 dias → 0; 31–60 → 1; 61–90 → 2; e
+  assim por diante, até acima de 330 dias → 11 (zera o bônus).
+- `penalidadeDeSinistros`: 0 sem sinistro; `sinistros + 1` quando houve.
+- Resultado limitado ao intervalo 0–10.
+- A apólice precisa ter vigorado **335 dias** para dar direito ao avanço de
+  classe, e **60 dias** para o bônus se transferir.
+
+A escala 0–10 é o padrão FENASEG usado pelo mercado brasileiro de seguro auto.
+`scripts/verificar-bonus.mjs` confere a implementação contra oito casos
+conhecidos (renovação em dia, atraso em cada faixa, combinação de sinistro com
+atraso); rode com `node scripts/verificar-bonus.mjs` depois de qualquer mexida
+na regra.
+
+**O que a calculadora NÃO faz, de propósito:** não promete desconto e não
+apresenta o resultado como definitivo. As regras variam de uma seguradora para
+outra, algumas avaliam também o histórico do condutor e do veículo, e a classe
+que vale é a que a seguradora emissora atribuir na apólice. A tela diz isso com
+todas as letras, e a tabela de faixas de desconto por classe está marcada como
+"faixas típicas de mercado, variam por seguradora".
+
+**Privacidade:** o cálculo acontece inteiramente no navegador. Nenhuma data e
+nenhum dado digitado ali sai do dispositivo — nada é enviado para a FIXSEG nem
+para lugar nenhum. A tela informa isso ao usuário.
+
+**Atalho:** o botão "Bônus" no cabeçalho, ao lado de "Calcule seu seguro",
+ocupa o lugar do antigo botão redondo de WhatsApp (o botão flutuante de
+WhatsApp da página continua onde estava, e o WhatsApp segue no menu mobile e no
+rodapé). A calculadora também aparece no menu mobile e no rodapé.
+
+---
+
+## 7. SEO
 
 - Metadata, Open Graph e Twitter Card em `src/lib/seo.tsx`, herdados por todas as páginas.
 - Imagem de Open Graph gerada no servidor (`app/opengraph-image.tsx`) — sem arquivo
@@ -448,7 +601,7 @@ Para o SEO local funcionar, preencha `address.city` e `address.state` em `site.t
 
 ---
 
-## 7. Publicação
+## 8. Publicação
 
 O passo a passo completo — Vercel, túnel a partir do seu computador, Cloudflare Pages e
 servidor próprio — está em **[DEPLOY.md](./DEPLOY.md)**.
@@ -488,7 +641,7 @@ variável, a trava não existe e o site funciona normalmente.
 
 ---
 
-## 8. Verificações já realizadas
+## 9. Verificações já realizadas
 
 O projeto foi testado com navegador automatizado antes da entrega:
 
@@ -507,6 +660,15 @@ O projeto foi testado com navegador automatizado antes da entrega:
 - **Menu mobile:** abre, navega e fecha corretamente.
 - **`prefers-reduced-motion`:** nenhum elemento fica invisível; a narrativa vira lista, as
   peças com movimento próprio param sem desaparecer e as ilustrações continuam íntegras.
+- **A narrativa no celular:** medida em 360×640, 390×844, 412×915 e 768×1024 — os seis
+  capítulos cabem na área útil com folga em todas elas (`story-fit.mjs`).
+- **Calculadora de bônus:** os oito casos conhecidos da regra FENASEG conferidos por
+  script, mais o preenchimento do formulário no navegador e a leitura do resultado.
+- **Seção de contato:** as duas colunas fecham exatamente na mesma linha, sem quebra de
+  palavra no e-mail nem no endereço.
+- **Desempenho:** tempo de quadro medido com a CPU 4× mais lenta, no celular, durante a
+  rolagem da narrativa e do resto da página (`perf2.mjs`), antes e depois de cada
+  alteração de animação.
 - **Os dois temas:** claro e escuro capturados em todas as seções da home e nas seis cenas
   da narrativa, a 1440px e a 390px. Fundo, contraste de texto, brilhos e a massa das
   ilustrações conferidos em cada um; nenhum transbordamento horizontal e nenhum aviso de
@@ -525,16 +687,20 @@ O projeto foi testado com navegador automatizado antes da entrega:
 
 ---
 
-## 9. Próximos passos sugeridos
+## 10. Próximos passos sugeridos
 
-1. **Confirmar o horário de atendimento** (`site.hours`) — é o único dado visível que não
+1. **Enviar a lista das seguradoras parceiras** (`content.ts` → `insurers`) e os arquivos
+   de logo em `/public/seguradoras/`. Sem a lista, a seção "Parceiros da FIXSEG" não
+   aparece. Enquanto os logos não chegarem, basta o nome: o carrossel mostra um cartão
+   tipográfico e troca pela imagem sozinho assim que o arquivo existir.
+2. **Ligar as avaliações do Google** (`GOOGLE_PLACES_API_KEY` + `GOOGLE_PLACE_ID`) para a
+   seção "O que falam de nós" existir. Passo a passo na seção 5.
+3. **Confirmar o horário de atendimento** (`site.hours`) — é o único dado visível que não
    veio da corretora.
-2. Revisar a Política de Privacidade e os Termos de Uso juridicamente e remover o aviso
+4. Revisar a Política de Privacidade e os Termos de Uso juridicamente e remover o aviso
    de pendência em `LegalPage.tsx`.
-3. Informar as redes sociais (`site.social`) e, se houver, o link do perfil no Google
+5. Informar as redes sociais (`site.social`) e, se houver, o link do perfil no Google
    Business em `address.mapsUrl`.
-4. Adicionar os logos das seguradoras parceiras autorizadas.
-5. Coletar e cadastrar os primeiros depoimentos com autorização.
 6. Informar os indicadores reais (clientes, anos, apólices, seguradoras).
 7. Definir o destino dos leads (`LEADS_ADAPTER`) — o WhatsApp e o e-mail já funcionam.
 8. Substituir `about.paragraphs` pelo texto institucional verdadeiro.

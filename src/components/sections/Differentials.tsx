@@ -9,7 +9,16 @@ import Reveal, { RevealItem } from '@/components/ui/Reveal';
  * "Mais do que vender seguros, protegemos suas conquistas."
  * Grade assimétrica: o primeiro item ocupa dois módulos, criando hierarquia
  * em vez de uma lista uniforme de caixas.
+ *
+ * Os ícones têm movimento próprio, e o ponto todo é que ele seja DESENCONTRADO:
+ * a mesma deriva com o mesmo compasso em quatro cartões lado a lado lê como um
+ * carrossel piscando, não como vida. O atraso e a duração saem do índice — nada
+ * de `Math.random()`, que daria um valor no servidor e outro no navegador e
+ * quebraria a hidratação.
  */
+const driftDelays = ['0s', '-2.4s', '-4.1s', '-1.3s', '-3.2s'];
+const driftDurations = ['7.2s', '8.6s', '6.4s', '9.1s', '7.8s'];
+
 export function Differentials() {
   const [first, ...rest] = differentials;
 
@@ -37,8 +46,7 @@ export function Differentials() {
           >
             <div
               aria-hidden="true"
-              className="glow-b pointer-events-none absolute -left-20 -top-20 h-64 w-64 rounded-full opacity-60 blur-[70px]"
-              
+              className="glow-b pointer-events-none absolute -left-20 -top-20 h-64 w-64 animate-drift-a rounded-full opacity-60 blur-[70px]"
             />
             <div className="relative">
               <span className="grid h-16 w-16 place-items-center rounded-3xl border border-brand-2/30 bg-brand-2/[.09] text-accent-ink">
@@ -67,18 +75,28 @@ export function Differentials() {
           </RevealItem>
 
           {/* demais diferenciais */}
-          {rest.map((d) => (
+          {rest.map((d, i) => (
             <RevealItem
               key={d.title}
               anim="rise"
-              className="group/d surface relative flex flex-col overflow-hidden p-6 transition-[transform,border-color] duration-500 ease-brand hover:-translate-y-1 hover:border-brand-2/35"
+              className="group/d surface relative flex flex-col overflow-hidden p-6 transition-[transform,border-color,box-shadow] duration-500 ease-brand hover:-translate-y-1 hover:border-brand-2/35 hover:shadow-lift focus-within:-translate-y-1 focus-within:border-brand-2/35"
             >
-              <span className="grid h-12 w-12 place-items-center rounded-2xl border border-hair bg-tint/[.035] text-accent-ink transition-all duration-500 ease-brand group-hover/d:border-brand-2/40 group-hover/d:text-fg">
-                <Icon
-                  name={d.icon}
-                  size={23}
-                  className="transition-transform duration-500 ease-brand group-hover/d:-rotate-6 group-hover/d:scale-110"
-                />
+              <span className="relative grid h-12 w-12 place-items-center overflow-hidden rounded-2xl border border-hair bg-tint/[.035] text-accent-ink transition-all duration-500 ease-brand group-hover/d:border-brand-2/40 group-hover/d:text-fg">
+                <span className="sheen-layer group-hover/d:animate-sheen-pass" aria-hidden="true" />
+                {/* deriva própria, fora de compasso com a dos vizinhos */}
+                <span
+                  className="relative z-[1] block animate-icon-drift"
+                  style={{
+                    animationDelay: driftDelays[i % driftDelays.length],
+                    animationDuration: driftDurations[i % driftDurations.length],
+                  }}
+                >
+                  <Icon
+                    name={d.icon}
+                    size={23}
+                    className="transition-transform duration-500 ease-brand group-hover/d:-rotate-6 group-hover/d:scale-110"
+                  />
+                </span>
               </span>
               <h3 className="mt-5 font-display text-[1.125rem] font-semibold text-fg">
                 {d.title}

@@ -17,11 +17,15 @@ export function QuoteSection() {
   return (
     <section id="cotacao" className="relative scroll-mt-24 overflow-hidden py-section">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
+        {/* Dois níveis: o de fora recebe o parallax do ScrollSmoother
+            (`data-speed`, que escreve `transform` em linha), o de dentro deriva
+            em CSS. Juntos no mesmo elemento, a animação venceria o parallax. */}
         <div
           data-speed="0.92"
-          className="glow-b absolute right-[-10%] top-[8%] h-[46vw] max-h-[560px] w-[46vw] max-w-[560px] rounded-full opacity-50 blur-[100px]"
-          
-        />
+          className="absolute right-[-10%] top-[8%] h-[46vw] max-h-[560px] w-[46vw] max-w-[560px]"
+        >
+          <div className="glow-b absolute inset-0 animate-drift-b rounded-full opacity-50 blur-[100px]" />
+        </div>
       </div>
 
       <div className="shell grid gap-12 lg:grid-cols-[.82fr_1.18fr] lg:gap-16">
@@ -39,11 +43,19 @@ export function QuoteSection() {
               { icon: 'shield-check' as const, text: 'Dados usados apenas para elaborar a cotação.' },
               { icon: 'user-check' as const, text: 'A análise é feita por uma pessoa, não por um robô.' },
             ].map((item) => (
-              <li key={item.text} className="flex items-start gap-3.5">
-                <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-hair bg-tint/[.035] text-accent-ink">
+              <li key={item.text} className="group/adv flex items-start gap-3.5">
+                <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-hair bg-tint/[.035] text-accent-ink transition-[border-color,transform] duration-500 ease-brand group-hover/adv:-translate-y-[2px] group-hover/adv:border-brand-2/40">
+                  {/* Estes três ícones também derivavam sozinhos. CORTADO na
+                      medição: junto com os das outras seções, o conjunto de
+                      derivas custava quadro na CPU 4× mais lenta, e aqui é onde
+                      menos falta — a seção inteira já tem o brilho em deriva ao
+                      fundo e o formulário ao lado, que é o que pede atenção. O
+                      ícone continua reagindo ao cursor, logo acima. */}
                   <Icon name={item.icon} size={18} />
                 </span>
-                <span className="text-[1.0625rem] leading-relaxed text-fg-3">{item.text}</span>
+                <span className="text-[1.0625rem] leading-relaxed text-fg-3 transition-colors duration-500 group-hover/adv:text-fg-2">
+                  {item.text}
+                </span>
               </li>
             ))}
           </ul>
@@ -60,14 +72,18 @@ export function QuoteSection() {
                     target="_blank"
                     rel="noopener noreferrer"
                     onClick={() => track('whatsapp_click', { placement: 'cotacao' })}
-                    className="group flex items-center gap-3 text-[1.0625rem] font-medium text-fg-2 transition-colors duration-300 hover:text-fg"
+                    className="group flex min-h-[44px] items-center gap-3 text-[1.0625rem] font-medium text-fg-2 transition-[color,transform] duration-300 ease-brand hover:translate-x-1 hover:text-fg active:translate-x-0 active:scale-[.98] active:duration-[90ms]"
                   >
-                    <Icon name="whatsapp" size={19} className="text-[#1FAF54]" />
+                    <Icon
+                      name="whatsapp"
+                      size={19}
+                      className="text-[#1FAF54] transition-transform duration-300 ease-brand group-hover:scale-110"
+                    />
                     Chamar no WhatsApp
                     <Icon
                       name="arrow-up-right"
                       size={14}
-                      className="text-fg-4 transition-transform duration-300 group-hover:translate-x-0.5"
+                      className="text-fg-4 transition-transform duration-300 ease-brand group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
                     />
                   </a>
                 )}
@@ -75,9 +91,13 @@ export function QuoteSection() {
                   <a
                     href={tel}
                     onClick={() => track('phone_click', { placement: 'cotacao' })}
-                    className="group flex items-center gap-3 text-[1.0625rem] font-medium text-fg-2 transition-colors duration-300 hover:text-fg"
+                    className="group flex min-h-[44px] items-center gap-3 text-[1.0625rem] font-medium text-fg-2 transition-[color,transform] duration-300 ease-brand hover:translate-x-1 hover:text-fg active:translate-x-0 active:scale-[.98] active:duration-[90ms]"
                   >
-                    <Icon name="phone" size={18} className="text-accent-ink" />
+                    <Icon
+                      name="phone"
+                      size={18}
+                      className="text-accent-ink transition-transform duration-300 ease-brand group-hover:-rotate-12 group-hover:scale-110"
+                    />
                     {site.contact.phone}
                   </a>
                 )}

@@ -50,8 +50,17 @@ export function HeroVisual({ className }: { className?: string }) {
         /* Entrega a composição já montada, sem animar.
            (A linha que buscava `[data-hv-draw]` foi removida: esse atributo não
            existe nesta cena — o check é um traço fixo, não desenhado — e a
-           NodeList vazia gerava "target not found" no console.) */
-        gsap.set(el.querySelectorAll('[data-hv]'), { opacity: 1, scale: 1, y: 0 });
+           NodeList vazia gerava "target not found" no console.)
+
+           O halo fica de fora: ele não participa da entrada, e forçar
+           `opacity: 1` nele acendia o brilho de fundo bem acima do calibrado,
+           deixando a primeira dobra lavada justamente no modo em que ela
+           deveria ficar mais sóbria. */
+        gsap.set(el.querySelectorAll('[data-hv]:not([data-hv="halo"])'), {
+          opacity: 1,
+          scale: 1,
+          y: 0,
+        });
         return;
       }
 
@@ -79,15 +88,16 @@ export function HeroVisual({ className }: { className?: string }) {
           '-=0.5',
         );
 
-      /* pulso suave e contínuo no núcleo */
-      const pulse = gsap.to('[data-hv="halo"]', {
-        scale: 1.12,
-        opacity: 0.28,
-        duration: 3.2,
-        repeat: -1,
-        yoyo: true,
-        ease: 'sine.inOut',
-      });
+      /* O pulso do halo era uma tween infinita do GSAP escalando o elemento;
+         virou a animação CSS `animate-halo-breathe`, só de opacidade.
+         Duas razões, as duas medidas:
+           1. tween infinita paga o motor de animação do GSAP em TODO quadro,
+              inclusive com a primeira dobra fora da tela;
+           2. o halo tem `blur(64px)`, e escalar uma camada desfocada obriga o
+              navegador a rasterizá-la de novo a cada quadro. Opacidade se
+              resolve no compositor.
+         Como o halo saiu da timeline, ele também saiu do `gsap.set` do modo
+         reduzido logo acima. */
 
       /* leve reação ao mouse (só em ponteiro fino) */
       let ctx: (() => void) | undefined;
@@ -107,7 +117,6 @@ export function HeroVisual({ className }: { className?: string }) {
 
       return () => {
         tl.kill();
-        pulse.kill();
         ctx?.();
       };
     },
@@ -121,11 +130,15 @@ export function HeroVisual({ className }: { className?: string }) {
       aria-hidden="true"
     >
       <div data-hv="parallax" className="absolute inset-0">
-        {/* halo de fundo */}
+        {/* Halo de fundo — respira sozinho, em CSS (ver o comentário no efeito).
+            Sem classe `opacity-*`: o valor base mora no keyframe, senão a
+            animação o sobrescreveria e o halo entraria mais claro. Com o
+            movimento reduzido a animação é zerada e sobra a opacidade padrão,
+            1 — daí o `opacity-40` continuar aqui como piso de segurança, e o
+            keyframe começar no mesmo lugar. */}
         <div
           data-hv="halo"
-          className="glow-core absolute left-1/2 top-1/2 h-[74%] w-[74%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-40 blur-[64px]"
-          
+          className="glow-core absolute left-1/2 top-1/2 h-[74%] w-[74%] -translate-x-1/2 -translate-y-1/2 animate-halo-breathe rounded-full opacity-40 blur-[64px]"
         />
 
         {/* anéis */}
@@ -194,6 +207,10 @@ export function HeroVisual({ className }: { className?: string }) {
                     className="absolute -translate-x-1/2 -translate-y-1/2"
                     style={{ left: `${x}%`, top: `${y}%` }}
                   >
+                    {/* Contra-rotação: mantém a peça em pé enquanto a órbita
+                        gira. Precisa ser um elemento SÓ dela — uma segunda
+                        animação de `transform` no mesmo elemento venceria esta
+                        e a peça giraria junto com a órbita. */}
                     <div
                       style={
                         reduced
@@ -204,9 +221,17 @@ export function HeroVisual({ className }: { className?: string }) {
                               }`,
                             }
                       }
-                      className="grid h-[52px] w-[52px] place-items-center rounded-2xl border border-hair bg-panel/[.86] text-accent-ink shadow-[0_10px_30px_-16px_rgba(0,0,0,.9)] backdrop-blur-sm md:h-[58px] md:w-[58px]"
                     >
-                      <Icon name={n.icon} size={24} />
+                      {/* Os oito nós chegaram a flutuar cada um no seu compasso.
+                          Foi CORTADO na medição: oito animações a mais, todas em
+                          peças com `backdrop-blur`, custaram quadro na CPU 4×
+                          mais lenta por um movimento que a órbita — que já é
+                          contínua e já é desencontrada entre os dois anéis — dá
+                          de graça. O que respira na primeira dobra são os
+                          brilhos, o halo e as duas etiquetas. */}
+                      <div className="grid h-[52px] w-[52px] place-items-center rounded-2xl border border-hair bg-panel/[.86] text-accent-ink shadow-[0_10px_30px_-16px_rgba(0,0,0,.9)] backdrop-blur-sm md:h-[58px] md:w-[58px]">
+                        <Icon name={n.icon} size={24} />
+                      </div>
                     </div>
                   </div>
                 );
@@ -263,30 +288,46 @@ export function HeroVisual({ className }: { className?: string }) {
         </div>
       </div>
 
-      {/* etiquetas flutuantes */}
-      <div
-        data-hv="chip"
-        className="absolute -left-1 top-[13%] flex items-center gap-2 rounded-full border border-hair bg-panel/[.9] px-3.5 py-2 text-[.8125rem] font-semibold uppercase tracking-[0.14em] text-fg-2 shadow-soft backdrop-blur-md sm:left-2"
-      >
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="absolute inset-0 rounded-full bg-brand-2" />
-          {!reduced && (
-            <span className="absolute inset-0 animate-pulse-ring rounded-full bg-brand-2" />
-          )}
-        </span>
-        Cobertura ativa
+      {/* Etiquetas flutuantes — o que "respira" na primeira dobra, junto com os
+          brilhos e o halo.
+
+          Três decisões, todas com motivo:
+          • A entrada (GSAP, com `clearProps`) fica no elemento de fora e a
+            flutuação no de dentro. No mesmo elemento, as duas disputariam a
+            propriedade `transform` e uma apagaria a outra.
+          • Compassos diferentes: 7,4s e 9,2s, com atraso negativo na segunda.
+            Subindo juntas, as duas pareciam um elevador.
+          • O `backdrop-blur-md` foi RETIRADO destas duas. Ele obriga o navegador
+            a refazer o desfoque do fundo a cada quadro de deslocamento, e era o
+            que tornava a flutuação cara. O fundo já é `bg-panel/[.9]`: com 90%
+            de opacidade, o desfoque praticamente não aparecia. */}
+      <div data-hv="chip" className="absolute -left-1 top-[13%] sm:left-2">
+        <div
+          className="flex animate-icon-bob items-center gap-2 rounded-full border border-hair bg-panel/[.9] px-3.5 py-2 text-[.8125rem] font-semibold uppercase tracking-[0.14em] text-fg-2 shadow-soft"
+          style={{ animationDuration: '7.4s' }}
+        >
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inset-0 rounded-full bg-brand-2" />
+            {!reduced && (
+              <span className="absolute inset-0 animate-pulse-ring rounded-full bg-brand-2" />
+            )}
+          </span>
+          Cobertura ativa
+        </div>
       </div>
 
-      <div
-        data-hv="chip"
-        className="absolute bottom-[15%] right-0 rounded-2xl border border-hair bg-panel/[.9] px-4 py-3 shadow-soft backdrop-blur-md"
-      >
-        <p className="text-[.75rem] font-semibold uppercase tracking-[0.16em] text-fg-4">
-          Pessoas e empresas
-        </p>
-        <p className="mt-1 font-display text-[1.0625rem] font-semibold text-fg">
-          10 frentes de proteção
-        </p>
+      <div data-hv="chip" className="absolute bottom-[15%] right-0">
+        <div
+          className="animate-icon-bob rounded-2xl border border-hair bg-panel/[.9] px-4 py-3 shadow-soft"
+          style={{ animationDuration: '9.2s', animationDelay: '-3.6s' }}
+        >
+          <p className="text-[.75rem] font-semibold uppercase tracking-[0.16em] text-fg-4">
+            Pessoas e empresas
+          </p>
+          <p className="mt-1 font-display text-[1.0625rem] font-semibold text-fg">
+            10 frentes de proteção
+          </p>
+        </div>
       </div>
     </div>
   );

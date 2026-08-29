@@ -47,12 +47,23 @@ export function SectionHeading({
       if (!el) return;
       const heading = el.querySelector<HTMLElement>('[data-heading]');
       const rest = el.querySelectorAll<HTMLElement>('[data-heading-rest]');
+      /* Relido só na hora de usar: o SplitText reconstrói o título e, quando o
+         destaque cai em mais de uma linha, clona o span do traço por linha.
+         Uma referência capturada antes do split apontaria para um nó
+         descartado — e o traço de uma das linhas nunca se desenharia. */
+      const drawUnderline = () =>
+        el
+          .querySelectorAll<HTMLElement>('[data-heading-underline]')
+          .forEach((n) => n.classList.add('is-drawn'));
 
       if (reduced) {
         /* `heading` pode ser nulo; o filtro evita alvo inexistente no GSAP. */
         const done = [heading, ...Array.from(rest)].filter(Boolean) as HTMLElement[];
         if (done.length) gsap.set(done, { opacity: 1, y: 0 });
         el.querySelectorAll('[data-anim]').forEach((n) => n.classList.add('is-in'));
+        /* Sem movimento o traço não se desenha: ele já chega desenhado.
+           A transição está zerada pelo CSS global, então não há animação. */
+        drawUnderline();
         return;
       }
 
@@ -88,6 +99,11 @@ export function SectionHeading({
         );
       }
 
+      /* O traço se desenha DEPOIS das linhas do título terminarem de subir —
+         antes disso ele apareceria por baixo de um texto ainda em movimento. É
+         uma vez só: o gatilho é `once` e a classe nunca é removida. */
+      tl.call(drawUnderline, undefined, heading ? '>-0.25' : '>');
+
       return () => {
         split?.revert();
         tl.scrollTrigger?.kill();
@@ -101,7 +117,11 @@ export function SectionHeading({
     typeof title === 'string' && highlight ? (
       <>
         {title.split(highlight)[0]}
-        <span className="text-gradient-brand">{highlight}</span>
+        {/* Dois spans: o de fora leva o traço, o de dentro leva o gradiente.
+            Ver `.heading-underline` em globals.css para o porquê. */}
+        <span data-heading-underline className="heading-underline">
+          <span className="text-gradient-brand">{highlight}</span>
+        </span>
         {title.split(highlight)[1]}
       </>
     ) : (
@@ -123,6 +143,12 @@ export function SectionHeading({
           data-anim="up"
           className="eyebrow mb-5 translate-y-3 opacity-0 [--anim-dist:12px]"
         >
+          {/* A faísca chegou a respirar (opacidade em laço) e foi CORTADA: são
+              nove etiquetas na página, cada uma uma animação num `<svg>` em
+              linha, que o Chrome não promove a camada própria — nove recálculos
+              de estilo por quadro, o tempo todo, por um efeito que ninguém vê.
+              Custou ~10ms de quadro na CPU 4× mais lenta. O destaque do título
+              já é o que dá vida a este bloco. */}
           <Icon name="spark" size={13} className="text-accent-ink" />
           {eyebrow}
         </span>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/hooks/useReducedMotion';
@@ -21,50 +21,112 @@ const filters: { key: Filter; label: string }[] = [
 ];
 
 /** Card de produto com microinterações: brilho que segue o cursor, ícone que
- *  reage, borda que acende e elevação suave. */
+ *  reage, borda que acende e elevação suave.
+ *
+ *  O estado "aceso" tem DUAS portas de entrada, e é o que faz o cartão
+ *  responder também no celular: `:hover` para quem tem ponteiro, e o atributo
+ *  `data-hot` para quem toca. Sem a segunda, num aparelho de toque o cartão
+ *  ficava exatamente como um PNG — e, pior, o `:hover` do navegador móvel
+ *  grudava depois do toque, deixando um cartão aceso para sempre.
+ *
+ *  `data-hot` é escrito direto no DOM, não em estado do React: o objetivo é não
+ *  redesenhar onze cartões a cada dedo que encosta na tela. */
 function InsuranceCard({ ins, index }: { ins: Insurance; index: number }) {
   const ref = useRef<HTMLDivElement>(null);
   /* Leitura síncrona: já correta no primeiro render do cliente, então a
      animação é construída uma única vez em vez de montada e remontada. */
   const reduced = prefersReducedMotion();
+  /* Coordenada pendente + quadro agendado: o `mousemove` dispara muito mais
+     vezes do que a tela se atualiza, e escrever a variável CSS a cada evento
+     fazia o navegador repintar o gradiente várias vezes por quadro. Com o
+     acúmulo, escrevemos uma vez por quadro — e só quando há quadro. */
+  const pending = useRef<{ x: number; y: number } | null>(null);
+  const frame = useRef(0);
 
-  const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (reduced) return;
+  const flush = () => {
+    frame.current = 0;
+    const el = ref.current;
+    const p = pending.current;
+    if (!el || !p) return;
+    el.style.setProperty('--mx', `${p.x}%`);
+    el.style.setProperty('--my', `${p.y}%`);
+  };
+
+  const aim = (clientX: number, clientY: number) => {
     const el = ref.current;
     if (!el) return;
     const r = el.getBoundingClientRect();
-    el.style.setProperty('--mx', `${((e.clientX - r.left) / r.width) * 100}%`);
-    el.style.setProperty('--my', `${((e.clientY - r.top) / r.height) * 100}%`);
+    pending.current = {
+      x: ((clientX - r.left) / r.width) * 100,
+      y: ((clientY - r.top) / r.height) * 100,
+    };
+    if (!frame.current) frame.current = requestAnimationFrame(flush);
   };
+
+  useEffect(() => () => cancelAnimationFrame(frame.current), []);
 
   return (
     <div
       ref={ref}
       data-reveal-item
+      data-card
       data-anim="rise"
-      onMouseMove={onMove}
-      className="group/card surface relative flex flex-col overflow-hidden p-6 transition-[transform,border-color,box-shadow] duration-500 ease-brand hover:-translate-y-1.5 hover:border-brand-2/40 hover:shadow-glow md:p-7"
+      onMouseMove={(e) => {
+        if (!reduced) aim(e.clientX, e.clientY);
+      }}
+      onPointerDown={(e) => {
+        /* no toque não existe hover: o cartão acende ao ser tocado, com o
+           brilho nascendo exatamente onde o dedo encostou */
+        if (e.pointerType === 'mouse') return;
+        aim(e.clientX, e.clientY);
+        ref.current?.setAttribute('data-hot', 'true');
+      }}
+      className={cn(
+        'group/card surface relative flex flex-col overflow-hidden p-6 md:p-7',
+        'transition-[transform,border-color,box-shadow] duration-500 ease-brand',
+        'hover:-translate-y-1.5 hover:border-brand-2/40 hover:shadow-glow',
+        'data-[hot=true]:-translate-y-1.5 data-[hot=true]:border-brand-2/40 data-[hot=true]:shadow-glow',
+        /* teclado: quem chega pelo Tab vê o mesmo cartão que quem passa o mouse */
+        'focus-within:-translate-y-1.5 focus-within:border-brand-2/40 focus-within:shadow-glow',
+      )}
     >
-      {/* brilho que acompanha o cursor */}
+      {/* brilho que acompanha o cursor (posição em --mx/--my) */}
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover/card:opacity-100"
-        style={{
-          background:
-            'radial-gradient(340px circle at var(--mx,50%) var(--my,0%), rgb(var(--brand-2) / .13), transparent 62%)',
-        }}
+        className="cursor-spot group-hover/card:opacity-100 group-focus-within/card:opacity-100 group-data-[hot=true]/card:opacity-100"
       />
 
       <div className="relative flex items-start justify-between gap-4">
-        <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl border border-hair icon-tile text-accent-ink transition-all duration-500 ease-brand group-hover/card:border-brand-2/45 group-hover/card:text-fg">
+        <span
+          className={cn(
+            'grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl border border-hair icon-tile text-accent-ink',
+            'transition-[border-color,color,transform,box-shadow] duration-500 ease-brand',
+            'group-hover/card:-translate-y-[3px] group-hover/card:border-brand-2/45 group-hover/card:text-fg',
+            'group-data-[hot=true]/card:-translate-y-[3px] group-data-[hot=true]/card:border-brand-2/45 group-data-[hot=true]/card:text-fg',
+          )}
+        >
+          {/* reflexo que atravessa a peça do ícone junto com o cartão */}
+          <span
+            aria-hidden="true"
+            className="sheen-layer group-hover/card:animate-sheen-pass group-data-[hot=true]/card:animate-sheen-pass"
+          />
           <Icon
             name={ins.icon}
             size={27}
-            className="transition-transform duration-500 ease-brand group-hover/card:scale-110"
+            className={cn(
+              'relative z-[1] transition-transform duration-500 ease-brand',
+              'group-hover/card:-rotate-6 group-hover/card:scale-110',
+              'group-data-[hot=true]/card:-rotate-6 group-data-[hot=true]/card:scale-110',
+            )}
           />
         </span>
 
-        <span className="mt-1 font-mono text-[.8125rem] text-fg-4 transition-colors duration-500 group-hover/card:text-accent-ink/60">
+        <span
+          className={cn(
+            'mt-1 font-mono text-[.8125rem] text-fg-4 transition-colors duration-500',
+            'group-hover/card:text-accent-ink/60 group-data-[hot=true]/card:text-accent-ink/60',
+          )}
+        >
           {String(index + 1).padStart(2, '0')}
         </span>
       </div>
@@ -83,20 +145,32 @@ function InsuranceCard({ ins, index }: { ins: Insurance; index: number }) {
         <Link
           href={`/seguros/${ins.slug}`}
           onClick={() => track('insurance_view', { insurance: ins.slug })}
-          className="group/btn inline-flex items-center gap-1.5 rounded-full border border-hair px-4 py-2.5 text-[.9375rem] font-semibold text-fg transition-all duration-300 ease-brand hover:border-brand-2/60 hover:bg-brand-2/[.09]"
+          className={cn(
+            'group/btn relative inline-flex items-center gap-1.5 overflow-hidden rounded-full border border-hair px-4 py-2.5',
+            'text-[.9375rem] font-semibold text-fg transition-all duration-300 ease-brand',
+            'hover:border-brand-2/60 hover:bg-brand-2/[.09] active:scale-[.96] active:duration-[90ms]',
+            /* quando o cartão inteiro acende, a borda do botão acende junto */
+            'group-data-[hot=true]/card:border-brand-2/60',
+          )}
         >
-          Conhecer
+          <span className="sheen-layer group-hover/btn:animate-sheen-pass" aria-hidden="true" />
+          <span className="relative z-[1]">Conhecer</span>
+          {/* a seta avança no hover do próprio botão E quando o cartão acende */}
           <Icon
             name="arrow-right"
             size={15}
-            className="transition-transform duration-300 ease-brand group-hover/btn:translate-x-[3px]"
+            className={cn(
+              'relative z-[1] transition-transform duration-300 ease-brand',
+              'group-hover/btn:translate-x-[4px] group-active/btn:translate-x-[6px]',
+              'group-data-[hot=true]/card:translate-x-[4px]',
+            )}
           />
         </Link>
 
         <Link
           href={`/cotacao?seguro=${ins.slug}`}
           onClick={() => track('cta_click', { placement: 'card_seguro', label: ins.name })}
-          className="inline-flex items-center gap-1.5 rounded-full px-3 py-2.5 text-[.9375rem] font-semibold text-fg-3 transition-colors duration-300 hover:text-accent-ink"
+          className="inline-flex items-center gap-1.5 rounded-full px-3 py-2.5 text-[.9375rem] font-semibold text-fg-3 transition-[color,transform] duration-300 hover:text-accent-ink active:scale-[.96] active:duration-[90ms]"
         >
           Cotar
         </Link>
@@ -168,6 +242,21 @@ export function Insurances() {
     { dependencies: [filter] },
   );
 
+  /* Só UM cartão fica aceso por vez no toque. Um ouvinte na seção inteira
+     resolve os onze: ao tocar em qualquer lugar, apaga todos os que não contêm
+     o alvo. Sem isto, cada cartão tocado ficaria aceso até a página recarregar
+     — que é o mesmo defeito do `:hover` grudado que o `data-hot` veio corrigir. */
+  useEffect(() => {
+    const onDown = (e: PointerEvent) => {
+      const target = e.target as Node | null;
+      document.querySelectorAll<HTMLElement>('[data-card][data-hot="true"]').forEach((card) => {
+        if (!target || !card.contains(target)) card.removeAttribute('data-hot');
+      });
+    };
+    document.addEventListener('pointerdown', onDown, { passive: true });
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, []);
+
   const wa = whatsappForInsurance('seguros');
 
   return (
@@ -195,10 +284,11 @@ export function Insurances() {
                 aria-selected={filter === f.key}
                 onClick={() => setFilter(f.key)}
                 className={cn(
-                  'rounded-full px-4 py-2.5 text-[.9375rem] font-semibold transition-all duration-400 ease-brand',
+                  'relative min-h-[44px] overflow-hidden rounded-full px-4 py-2.5 text-[.9375rem] font-semibold',
+                  'transition-all duration-400 ease-brand active:scale-[.96] active:duration-[90ms]',
                   filter === f.key
                     ? 'bg-brand-gradient text-on-brand shadow-[0_8px_24px_-12px_rgba(2,179,249,.8)]'
-                    : 'text-fg-3 hover:bg-tint/6 hover:text-fg',
+                    : 'text-fg-3 hover:-translate-y-[2px] hover:bg-tint/6 hover:text-fg',
                 )}
               >
                 {f.label}
@@ -224,7 +314,6 @@ export function Insurances() {
             <div
               aria-hidden="true"
               className="glow-a pointer-events-none absolute -right-16 -top-16 h-48 w-48 rounded-full opacity-70 blur-[52px]"
-              
             />
             <div className="relative">
               <span className="eyebrow">

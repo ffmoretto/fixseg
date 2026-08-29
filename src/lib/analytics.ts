@@ -30,7 +30,10 @@ export type TrackEvent =
   | 'quote_step'
   | 'quote_submit'
   | 'contact_submit'
-  | 'insurance_view';
+  | 'insurance_view'
+  /* calculadora de bônus: o cálculo roda só no navegador; o evento registra
+     apenas que houve um cálculo, sem nenhum dado digitado pelo visitante. */
+  | 'bonus_calculate';
 
 type Payload = Record<string, string | number | boolean | undefined>;
 

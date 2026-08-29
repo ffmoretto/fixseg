@@ -14,6 +14,22 @@ export const mainNav: NavItem[] = [
   { label: 'Contato', href: '/#contato' },
 ];
 
+/**
+ * Atalho da calculadora de bônus.
+ *
+ * Fica fora do `mainNav` de propósito: o menu de desktop já tem seis itens e
+ * um sétimo estouraria a largura em telas de 1024px. A calculadora aparece
+ * como botão próprio no cabeçalho (ao lado do CTA principal), como item
+ * destacado no menu mobile e na lista do rodapé — todos leem daqui.
+ */
+export const calculadoraNav: NavItem = {
+  label: 'Calculadora de bônus',
+  href: '/calculadora-bonus',
+};
+
+/** Rótulo curto do botão do cabeçalho, quando há espaço para texto. */
+export const calculadoraLabelCurto = 'Bônus';
+
 /** Links rápidos do footer. */
 export const footerNav: NavItem[] = [
   { label: 'Início', href: '/#inicio' },
@@ -23,6 +39,7 @@ export const footerNav: NavItem[] = [
   { label: 'Sobre nós', href: '/#sobre' },
   { label: 'Conteúdo', href: '/#blog' },
   { label: 'Dúvidas frequentes', href: '/#faq' },
+  { label: 'Calculadora de bônus', href: '/calculadora-bonus' },
   { label: 'Cotação', href: '/cotacao' },
 ];
 

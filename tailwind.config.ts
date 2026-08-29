@@ -60,6 +60,11 @@ const config: Config = {
         'brand-mid': token('brand-mid'),
         'accent-ink': token('accent-ink'),
 
+        /* Cor de alerta — só as ilustrações da narrativa usam (fogo, perigo).
+           Ver o comentário em globals.css: é a única exceção à paleta. */
+        alert: token('alert'),
+        'alert-2': token('alert-2'),
+
         /* Texto e ícones POR CIMA de superfície da marca (gradiente azul,
            verde do WhatsApp). Branco nos dois temas, de propósito: o fundo ali
            não muda. Usar `text-fg` nesses lugares deixaria texto escuro sobre
@@ -169,6 +174,66 @@ const config: Config = {
           to: { transform: 'translateY(-42px) scale(1.6)', opacity: '0' },
         },
         'dash-move': { to: { strokeDashoffset: '-40' } },
+
+        /* ------------------------------------------------------------------
+           MOVIMENTO CONTÍNUO DISCRETO (passada de "vida")
+           ------------------------------------------------------------------
+           Todos abaixo mexem SÓ em `transform`/`opacity`. Os que se aplicam a
+           brilhos grandes e desfocados usam apenas translação: `scale` num
+           elemento com `blur()` obriga o navegador a rasterizar de novo a cada
+           quadro, e era exatamente o que derrubava o quadro nas medições.
+
+           O primeiro e o último passo de cada um são o estado neutro. Isso é o
+           que faz o movimento reduzido funcionar de graça: o CSS global zera a
+           duração e o elemento volta ao estilo base, no lugar certo.
+           ------------------------------------------------------------------ */
+        'drift-a': {
+          '0%,100%': { transform: 'translate3d(0,0,0)' },
+          '50%': { transform: 'translate3d(2.5%,-3.5%,0)' },
+        },
+        'drift-b': {
+          '0%,100%': { transform: 'translate3d(0,0,0)' },
+          '50%': { transform: 'translate3d(-3%,2.5%,0)' },
+        },
+        /* respiração de brilho: opacidade, sem tocar na geometria */
+        'glow-breathe': {
+          '0%,100%': { opacity: '0.72' },
+          '50%': { opacity: '1' },
+        },
+        /* deriva mínima de ícone — o compasso vem do atraso, não do keyframe */
+        'icon-drift': {
+          '0%,100%': { transform: 'translate3d(0,0,0) rotate(0deg)' },
+          '50%': { transform: 'translate3d(0,-4px,0) rotate(-2.5deg)' },
+        },
+        'icon-bob': {
+          '0%,100%': { transform: 'translate3d(0,0,0)' },
+          '50%': { transform: 'translate3d(0,-5px,0)' },
+        },
+        /* Respiração do halo da primeira dobra. SÓ opacidade — e essa é a
+           escolha que importa aqui: o halo tem `blur(64px)`, e mexer na escala
+           de uma camada desfocada obriga o navegador a rasterizá-la de novo a
+           cada quadro. A versão anterior escalava (por GSAP) e era a peça mais
+           cara da cena. A opacidade é resolvida no compositor.
+           A opacidade base vive no keyframe, não numa classe `opacity-*`: uma
+           animação de opacidade substitui o valor da classe, e o halo entraria
+           bem mais claro do que foi calibrado. */
+        'halo-breathe': {
+          '0%,100%': { opacity: '0.4' },
+          '50%': { opacity: '0.56' },
+        },
+        /* `sheen` com a opacidade dentro. Existe por medição, não por gosto: o
+           brilho que atravessa é uma camada do tamanho do cartão, e enquanto ela
+           estivesse desenhável o navegador a repintava junto com o cartão em
+           toda rolagem — havia mais de vinte na página. Em repouso a camada fica
+           em `opacity: 0` (a classe `.sheen-layer`) e o navegador a pula
+           inteira; a opacidade só existe durante a passagem, aqui. O `sheen`
+           original continua onde estava, intocado. */
+        'sheen-pass': {
+          '0%': { transform: 'translateX(-120%)', opacity: '0' },
+          '14%': { opacity: '1' },
+          '86%': { opacity: '1' },
+          '100%': { transform: 'translateX(220%)', opacity: '0' },
+        },
       },
       animation: {
         'pulse-ring': 'pulse-ring 2.6s cubic-bezier(.22,1,.36,1) infinite',
@@ -180,6 +245,15 @@ const config: Config = {
         'rain-fall': 'rain-fall 1.1s linear infinite',
         'smoke-rise': 'smoke-rise 3.4s ease-out infinite',
         'dash-move': 'dash-move 1.6s linear infinite',
+
+        /* passada de "vida" — ver os keyframes acima */
+        'drift-a': 'drift-a 26s ease-in-out infinite',
+        'drift-b': 'drift-b 32s ease-in-out infinite',
+        'glow-breathe': 'glow-breathe 9s ease-in-out infinite',
+        'icon-drift': 'icon-drift 7s ease-in-out infinite',
+        'icon-bob': 'icon-bob 6.4s ease-in-out infinite',
+        'halo-breathe': 'halo-breathe 7s ease-in-out infinite',
+        'sheen-pass': 'sheen-pass 1.1s cubic-bezier(.22,1,.36,1)',
       },
     },
   },

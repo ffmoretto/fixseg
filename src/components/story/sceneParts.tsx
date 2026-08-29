@@ -16,9 +16,12 @@ import type { CSSProperties, ReactNode } from 'react';
  *   · tema claro  → `--fg` é quase preto, então as massas são tinta sobre papel;
  *   · tema escuro → `--fg` é branco, então as mesmas massas são luz sobre breu.
  * A ilustração inverte junto com o tema sem nenhuma regra duplicada. Os pontos
- * de cor são sempre `--brand` / `--brand-2` / `--accent-ink`, que já são
- * ajustados por tema no globals.css. Paleta: preto, azul elétrico, azul ciano
- * e branco — nada além disso.
+ * de cor são `--brand` / `--brand-2` / `--accent-ink`, ajustados por tema no
+ * globals.css.
+ *
+ * UMA exceção, e só uma: `--alert` / `--alert-2` (âmbar), usados exclusivamente
+ * nas peças de fogo e perigo. Chama em ciano não é lida como chama. O âmbar não
+ * aparece em nenhum outro lugar do site. Ver o comentário no globals.css.
  *
  * -----------------------------------------------------------------------------
  * CONVENÇÃO DE ANIMAÇÃO (lida pelo orquestrador em StoryScroll.tsx)
@@ -29,6 +32,9 @@ import type { CSSProperties, ReactNode } from 'react';
  *                      É o que dá a sensação de "o mundo ganhou corpo".
  *   data-scene-live    tem movimento próprio, em CSS, independente do scroll
  *                      (chama, chuva, fumaça, roda). Nunca é alvo do GSAP.
+ *   data-depth="0.3"   participa do parallax: o orquestrador desloca o
+ *                      elemento na proporção informada enquanto o capítulo
+ *                      avança. Fundo perto de 0.1, primeiro plano perto de 1.
  *   data-scene-risk    o imprevisto. Entra com impacto, depois da construção.
  *   data-scene-shield  a proteção. Entra por último e devolve a cor à cena.
  *
@@ -135,6 +141,19 @@ export const detail = (o = 0.26, w = 1.1) => ({
 /** Preenchimento na cor da marca (ciano). */
 export const accent = (o = 0.9) => ({ fill: `rgb(var(--brand-2) / ${o})` });
 
+/** Preenchimento na cor de alerta (fogo, brasa, sinal de perigo). */
+export const alert = (o = 0.9) => ({ fill: `rgb(var(--alert) / ${o})` });
+
+/** Traço na cor de alerta. */
+export const alertStroke = (w = 2, o = 0.9) => ({
+  fill: 'none',
+  stroke: `rgb(var(--alert) / ${o})`,
+  strokeWidth: w,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+  vectorEffect: 'non-scaling-stroke' as const,
+});
+
 /** Traço na cor da marca. */
 export const accentStroke = (w = 2, o = 0.85) => ({
   fill: 'none',
@@ -152,6 +171,7 @@ export const topFace = (id: string) => ({ fill: `url(#${id}-top)` });
 export const glass = (id: string) => ({ fill: `url(#${id}-glass)` });
 export const brandFill = (id: string) => ({ fill: `url(#${id}-brand)` });
 export const heat = (id: string) => ({ fill: `url(#${id}-heat)` });
+export const energy = (id: string) => ({ fill: `url(#${id}-energy)` });
 
 /* ------------------------------------------------------------------ legado */
 /** Compatibilidade: cenas antigas importavam `line`/`lineThin`. */
@@ -229,11 +249,23 @@ export function SceneDefs({ id }: { id: string }) {
         <rect x="0" y="0" width="560" height="400" fill={`url(#${id}-vignette)`} />
       </mask>
 
-      {/* energia / calor — chama e descarga, dentro da paleta */}
+      {/* CALOR — fogo e brasa.
+          Única parte da ilustração fora da paleta da marca, e por um motivo
+          concreto: chama em ciano não é lida como chama. Ver `--alert` no
+          globals.css. Base quente e escura, topo claro. */}
       <linearGradient id={`${id}-heat`} x1="0" y1="1" x2="0" y2="0">
-        <stop offset="0%" stopColor="rgb(var(--brand) / .18)" />
-        <stop offset="45%" stopColor="rgb(var(--brand-2) / .62)" />
-        <stop offset="100%" stopColor="rgb(var(--brand-2) / .95)" />
+        <stop offset="0%" stopColor="rgb(var(--alert) / .35)" />
+        <stop offset="42%" stopColor="rgb(var(--alert) / .92)" />
+        <stop offset="100%" stopColor="rgb(var(--alert-2) / .98)" />
+      </linearGradient>
+
+      {/* ENERGIA — descarga elétrica, faísca, curto-circuito.
+          Esta continua ciano: relâmpago azul é o que o olho espera, e é a cor
+          da marca no seu papel mais natural. */}
+      <linearGradient id={`${id}-energy`} x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0%" stopColor="rgb(var(--brand) / .55)" />
+        <stop offset="50%" stopColor="rgb(var(--brand-2) / .95)" />
+        <stop offset="100%" stopColor="rgb(255 255 255 / .95)" />
       </linearGradient>
 
       <filter id={`${id}-glow`} x="-45%" y="-45%" width="190%" height="190%">
@@ -529,13 +561,14 @@ export function Flame({
           cy="-22"
           rx="30"
           ry="38"
-          fill="rgb(var(--brand-2) / .16)"
+          fill="rgb(var(--alert) / .3)"
           filter={`url(#${id}-haze)`}
         />
       )}
 
       {/* brasa: o pé quente que assenta a chama na superfície */}
-      <ellipse cx="1" cy="0" rx="16" ry="4" fill="rgb(var(--brand-2) / .38)" />
+      <ellipse cx="1" cy="0" rx="17" ry="4.5" fill="rgb(var(--alert) / .55)" />
+      <ellipse cx="1" cy="0" rx="9" ry="2.6" fill="rgb(var(--alert-2) / .75)" />
 
       {tongues.map((t, i) => (
         <path
@@ -559,7 +592,7 @@ export function Flame({
       <path
         data-scene-live
         d="M0 0C-4 0-6-6-5-12C-4-18-1-20-2-29C2-21 4-15 4-9C4-4 2 0 0 0Z"
-        fill="rgb(255 255 255 / .78)"
+        fill="rgb(255 255 255 / .9)"
         className="fill-box animate-flicker"
         style={
           { animationDuration: '.8s', transformOrigin: 'bottom center' } as CSSProperties
@@ -669,6 +702,122 @@ export function Wheel({
       <circle cx={x} cy={y} r={r * 0.18} fill={INK.deep} />
       <circle {...detail(0.3, 1.2)} cx={x} cy={y} r={r} />
     </g>
+  );
+}
+
+/**
+ * Faísca — estilhaço de luz que salta de um ponto de impacto.
+ *
+ * Determinístico de propósito: os ângulos vêm do índice, não de `Math.random`,
+ * senão servidor e cliente geram HTML diferente e o React descarta a árvore.
+ */
+export function Sparks({
+  x,
+  y,
+  count = 9,
+  radius = 26,
+  tone = 'alert',
+}: {
+  x: number;
+  y: number;
+  count?: number;
+  radius?: number;
+  tone?: 'alert' | 'brand';
+}) {
+  const cor = tone === 'alert' ? 'rgb(var(--alert-2) / .95)' : 'rgb(var(--brand-2) / .95)';
+  return (
+    <g>
+      {Array.from({ length: count }, (_, i) => {
+        const a = ((i * 360) / count + (i % 2 ? 14 : 0)) * (Math.PI / 180);
+        const r1 = radius * (0.45 + ((i * 7) % 5) / 12);
+        const r2 = radius * (1 + ((i * 11) % 6) / 10);
+        return (
+          <path
+            key={i}
+            d={`M${xy(x + Math.cos(a) * r1)} ${xy(y + Math.sin(a) * r1)}L${xy(
+              x + Math.cos(a) * r2,
+            )} ${xy(y + Math.sin(a) * r2)}`}
+            stroke={cor}
+            strokeWidth={i % 3 === 0 ? 2.4 : 1.5}
+            strokeLinecap="round"
+            fill="none"
+            data-scene-live
+            className="animate-flicker"
+            style={
+              {
+                animationDelay: `${(i % 5) * 0.09}s`,
+                animationDuration: `${0.5 + (i % 4) * 0.14}s`,
+              } as CSSProperties
+            }
+          />
+        );
+      })}
+    </g>
+  );
+}
+
+/**
+ * Descarga elétrica — o raio e o clarão que ele joga em volta.
+ * Fica em ciano: relâmpago azul é o que o olho espera, e é a cor da marca no
+ * seu papel mais natural.
+ */
+export function Bolt({
+  id,
+  d,
+  glow = true,
+}: {
+  id: string;
+  d: string;
+  glow?: boolean;
+}) {
+  return (
+    <g>
+      {glow && <path d={d} fill="rgb(var(--brand-2) / .35)" filter={`url(#${id}-haze)`} />}
+      <path
+        data-scene-live
+        d={d}
+        fill={`url(#${id}-energy)`}
+        filter={`url(#${id}-glow)`}
+        className="animate-flicker"
+        style={{ animationDuration: '.42s' } as CSSProperties}
+      />
+    </g>
+  );
+}
+
+/**
+ * Cone de luz — farol, holofote, luz que escapa por uma abertura.
+ * Dá volume ao ar da cena e é o que faz a noite parecer noite.
+ */
+export function LightCone({
+  x,
+  y,
+  length = 120,
+  spread = 26,
+  angle = 180,
+  tone = 'brand',
+  opacity = 0.5,
+}: {
+  x: number;
+  y: number;
+  length?: number;
+  spread?: number;
+  angle?: number;
+  tone?: 'brand' | 'alert';
+  opacity?: number;
+}) {
+  const cor = tone === 'alert' ? 'var(--alert-2)' : 'var(--brand-2)';
+  const rad = (angle * Math.PI) / 180;
+  const px = x + Math.cos(rad) * length;
+  const py = y + Math.sin(rad) * length;
+  const nx = Math.cos(rad + Math.PI / 2) * spread;
+  const ny = Math.sin(rad + Math.PI / 2) * spread;
+  return (
+    <path
+      d={`M${xy(x)} ${xy(y)}L${xy(px + nx)} ${xy(py + ny)}L${xy(px - nx)} ${xy(py - ny)}Z`}
+      fill={`rgb(${cor} / ${opacity})`}
+      style={{ filter: 'blur(6px)' }}
+    />
   );
 }
 

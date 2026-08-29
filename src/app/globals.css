@@ -76,6 +76,22 @@
   --m-void: color-mix(in srgb, #000 58%, rgb(var(--page)));
   --m-lift: #ffffff;
 
+  /* ------------------------------------------------------------------------
+     COR DE ALERTA — exclusiva das ilustrações da narrativa
+     ------------------------------------------------------------------------
+     A identidade da FIXSEG é preto, azul elétrico, azul ciano e branco, e o
+     site inteiro obedece a isso. Estas duas variáveis são a ÚNICA exceção, e
+     existem por um motivo específico: fogo em ciano não é lido como fogo. Nos
+     testes, as chamas azuis pareciam folhagem ou gota d'água, e o momento do
+     imprevisto — que é o coração da narrativa — perdia força.
+     O âmbar aparece só nas peças de risco das cenas (chama, brasa, faísca,
+     sinal de alerta). Não entra em botão, texto, ícone de interface nem em
+     nenhuma outra seção. Para removê-lo por completo e voltar ao ciano, troque
+     os dois valores abaixo por `var(--brand-2)` — nada mais precisa mudar.
+     ------------------------------------------------------------------------ */
+  --alert: 201 92 12;
+  --alert-2: 245 158 66;
+
   /* brilhos decorativos */
   --glow-a: radial-gradient(circle, rgba(11, 100, 252, 0.14) 0%, rgba(11, 100, 252, 0.04) 45%, transparent 70%);
   --glow-b: radial-gradient(circle, rgba(2, 179, 249, 0.13) 0%, rgba(2, 179, 249, 0.03) 50%, transparent 72%);
@@ -93,6 +109,20 @@
   --veil-opacity: 0.86;
 
   --header-h: 98px;
+
+  /* ------------------------------------------------------------------------
+     BRILHOS QUE ATRAVESSAM (microinterações)
+     ------------------------------------------------------------------------
+     Existem como token para que nenhum componente escreva cor absoluta.
+     `--sheen-on-brand` é branco nos DOIS temas de propósito: ele passa por cima
+     de superfície da marca (gradiente azul, verde do WhatsApp), que não muda de
+     cor entre os temas — a mesma razão do token `on-brand`.
+     `--sheen-surface` e `--sheen-num` passam por cima da página, então seguem
+     o tema.
+     ------------------------------------------------------------------------ */
+  --sheen-on-brand: rgba(255, 255, 255, 0.42);
+  --sheen-surface: rgb(var(--tint) / 0.1);
+  --sheen-num: rgb(var(--brand-2) / 0.34);
 }
 
 [data-theme='dark'] {
@@ -134,6 +164,10 @@
   --m-void: color-mix(in srgb, #000 78%, rgb(var(--page)));
   --m-lift: color-mix(in srgb, rgb(var(--fg)) 82%, rgb(var(--page)));
 
+  /* alerta das ilustrações — ver a explicação no bloco do tema claro */
+  --alert: 255 138 40;
+  --alert-2: 255 201 128;
+
   --glow-a: radial-gradient(circle, rgba(11, 100, 252, 0.34) 0%, rgba(11, 100, 252, 0.08) 48%, transparent 70%);
   --glow-b: radial-gradient(circle, rgba(2, 179, 249, 0.3) 0%, rgba(2, 179, 249, 0.06) 50%, transparent 72%);
   --glow-core: radial-gradient(circle, rgba(2, 179, 249, 0.5) 0%, rgba(11, 100, 252, 0.24) 45%, transparent 72%);
@@ -146,6 +180,11 @@
 
   --veil: 4 6 11;
   --veil-opacity: 0.82;
+
+  /* brilhos que atravessam — ver a explicação no bloco do tema claro */
+  --sheen-on-brand: rgba(255, 255, 255, 0.42);
+  --sheen-surface: rgb(var(--tint) / 0.14);
+  --sheen-num: rgb(var(--brand-2) / 0.5);
 }
 
 :root {
@@ -432,6 +471,112 @@
   }
   .no-scrollbar::-webkit-scrollbar {
     display: none;
+  }
+
+  /* ========================================================================
+     MICROINTERAÇÕES — peças reutilizadas pela passada de "vida"
+     ======================================================================== */
+
+  /* Brilho que atravessa o botão. Usa o keyframe `sheen`, já existente, em vez
+     de uma transição: a transição voltava de ré ao tirar o cursor, o que lê
+     como reflexo indo e vindo. A animação atravessa uma vez e some. */
+  .sheen-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    /* Invisível em repouso — e isso é medição, não capricho: com a camada
+       desenhável, o navegador repintava um gradiente do tamanho do cartão em
+       toda rolagem, vezes as mais de vinte peças da página. Em `opacity: 0` ele
+       pula a camada inteira. A opacidade volta dentro do keyframe
+       `sheen-pass`. */
+    opacity: 0;
+    transform: translateX(-120%);
+    background: linear-gradient(105deg, transparent, var(--sheen-tone, var(--sheen-surface)), transparent);
+  }
+  .sheen-on-brand {
+    --sheen-tone: var(--sheen-on-brand);
+  }
+
+  /* Brilho que segue o cursor dentro de um cartão.
+     A posição chega por `--mx`/`--my`, atualizadas no `mousemove` com throttle
+     por requestAnimationFrame. Sem posição definida, o padrão é o topo do
+     cartão — que é onde o toque costuma acontecer. */
+  .cursor-spot {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+    background: radial-gradient(
+      340px circle at var(--mx, 50%) var(--my, 0%),
+      rgb(var(--brand-2) / 0.15),
+      transparent 62%
+    );
+  }
+
+  /* Número que "assenta": o invólucro precisa aceitar `transform` (inline não
+     aceita) e recortar o brilho que atravessa. `clip-path` e não
+     `overflow: hidden`: overflow em inline-block muda a linha de base do
+     elemento, e o contador aparece ao lado de texto alinhado por ela
+     ("Classe 8 de 10"). O recorte é folgado para não comer a antisserrilha. */
+  .counter-live {
+    position: relative;
+    display: inline-block;
+    clip-path: inset(-14% -5%);
+  }
+  /* Em repouso o brilho é escondido pela OPACIDADE, não por um
+     `translateX(-140%)` no CSS. O translate parecia mais direto e estava errado:
+     o GSAP lê o transform existente, converte os -140% para pixels e guarda como
+     `x`; ao animar `xPercent` ele soma os dois, e o brilho terminava parado
+     exatamente em cima do número, como uma tarja. Sem transform no CSS, o
+     `xPercent` do GSAP é a única fonte de posição. */
+  .counter-sheen {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    background: linear-gradient(104deg, transparent, var(--sheen-num), transparent);
+  }
+
+  /* Traço que se desenha por baixo do destaque do título.
+     Dois spans aninhados de propósito: o de fora carrega o traço (fundo comum),
+     o de dentro carrega o gradiente com `background-clip: text`. Um span só não
+     serve — o recorte no texto consumiria também o traço.
+     Continua sendo elemento em linha, então o destaque quebra em várias linhas
+     normalmente em 390px; `box-decoration-break: clone` faz cada linha ganhar o
+     seu próprio traço. */
+  .heading-underline {
+    background-image: linear-gradient(90deg, rgb(var(--brand-2) / 0.9), rgb(var(--brand) / 0.5));
+    background-repeat: no-repeat;
+    /* Sobe 0,1em em vez de encostar no fundo da caixa: em `0 100%` o traço cai
+       na faixa dos descendentes e some por baixo da máscara de linha que o
+       SplitText coloca em cada linha do título. */
+    background-position: 0 calc(100% - 0.1em);
+    /* Espessura em `em`: acompanha a escala do título, que é `clamp()`. Em
+       pixel fixo o traço some no display grande e engrossa demais em 390px. */
+    background-size: 0% 0.055em;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    transition: background-size 0.95s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .heading-underline.is-drawn {
+    background-size: 100% 0.055em;
+  }
+
+  /* Marcador da linha do tempo. Acende quando o traço chega nele — o estado
+     mora aqui, e não no JavaScript, porque envolve cor, borda e sombra e é o
+     CSS que sabe traduzir isso nos dois temas. */
+  .step-dot {
+    transition:
+      border-color 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+      box-shadow 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+      color 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .step-dot.is-lit {
+    border-color: rgb(var(--brand-2) / 0.55);
+    box-shadow:
+      0 0 0 1px rgb(var(--brand-2) / 0.22),
+      0 14px 36px -18px rgb(var(--brand) / 0.65);
   }
 }
 

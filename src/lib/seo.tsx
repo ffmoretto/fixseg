@@ -144,6 +144,56 @@ export function organizationSchema() {
   return schema;
 }
 
+/**
+ * `aggregateRating` + `Review` da organização — SOMENTE com avaliações reais.
+ *
+ * Não editamos `organizationSchema()`: este bloco é um nó separado com o MESMO
+ * `@id`, e o Google funde nós que compartilham identificador. Assim a nota só
+ * existe no structured data quando as avaliações do Google estão realmente
+ * configuradas e retornaram conteúdo — e a organização continua sendo emitida
+ * do jeito de sempre no layout, com ou sem avaliação.
+ *
+ * Devolve `null` quando não há dado real. Nota inventada em structured data é
+ * violação das diretrizes do Google, não um detalhe de SEO.
+ */
+export function reviewsSchema(dados: {
+  notaMedia: number | null;
+  totalAvaliacoes: number;
+  avaliacoes: { autor: string; nota: number; texto: string }[];
+}): Record<string, unknown> | null {
+  if (dados.notaMedia === null || dados.totalAvaliacoes < 1) return null;
+
+  const schema: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'InsuranceAgency',
+    '@id': `${site.url}/#organizacao`,
+    aggregateRating: {
+      '@type': 'AggregateRating',
+      ratingValue: Number(dados.notaMedia.toFixed(1)),
+      reviewCount: dados.totalAvaliacoes,
+      bestRating: 5,
+      worstRating: 1,
+    },
+  };
+
+  const comTexto = dados.avaliacoes.filter((a) => a.texto.trim().length > 0);
+  if (comTexto.length) {
+    schema.review = comTexto.map((a) => ({
+      '@type': 'Review',
+      author: { '@type': 'Person', name: a.autor },
+      reviewRating: {
+        '@type': 'Rating',
+        ratingValue: a.nota,
+        bestRating: 5,
+        worstRating: 1,
+      },
+      reviewBody: a.texto,
+    }));
+  }
+
+  return schema;
+}
+
 /** Lista de serviços oferecidos — ajuda o Google a entender o portfólio. */
 export function servicesSchema(items: { name: string; description: string; slug: string }[]) {
   return {

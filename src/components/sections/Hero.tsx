@@ -97,16 +97,31 @@ export function Hero() {
       {/* ---------------------------------------------------------------- fundo */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
         <div className="absolute inset-0 bg-tech-grid opacity-70" />
+        {/* Os brilhos ficam em deriva lenta e desencontrada, para que a primeira
+            dobra nunca pareça uma imagem parada.
+
+            Dois níveis por brilho, e isso não é excesso: o de fora é o que o
+            ScrollSmoother move pelo `data-speed`, escrevendo `transform` em
+            linha; se a animação CSS estivesse no mesmo elemento, ela venceria o
+            transform do parallax (animação ganha de estilo em linha) e o
+            parallax simplesmente sumiria.
+
+            A deriva é só TRANSLAÇÃO, nunca `scale`: estas peças têm
+            `blur(110px)`, e mudar a escala de uma camada desfocada obriga o
+            navegador a rasterizá-la de novo a cada quadro. Foi o que apareceu
+            na medição e foi cortado. */}
         <div
           data-speed="0.86"
-          className="glow-a absolute -left-[18%] top-[-18%] h-[62vw] max-h-[760px] w-[62vw] max-w-[760px] rounded-full opacity-60 blur-[110px]"
-          
-        />
+          className="absolute -left-[18%] top-[-18%] h-[62vw] max-h-[760px] w-[62vw] max-w-[760px]"
+        >
+          <div className="glow-a absolute inset-0 animate-drift-a rounded-full opacity-60 blur-[110px]" />
+        </div>
         <div
           data-speed="1.12"
-          className="glow-b absolute -right-[14%] top-[24%] h-[52vw] max-h-[640px] w-[52vw] max-w-[640px] rounded-full opacity-55 blur-[110px]"
-          
-        />
+          className="absolute -right-[14%] top-[24%] h-[52vw] max-h-[640px] w-[52vw] max-w-[640px]"
+        >
+          <div className="glow-b absolute inset-0 animate-drift-b rounded-full opacity-55 blur-[110px]" />
+        </div>
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-page" />
       </div>
 
@@ -181,29 +196,39 @@ export function Hero() {
                   key={ins.slug}
                   href={`/cotacao?seguro=${ins.slug}`}
                   onClick={() => track('cta_click', { placement: 'hero_pick', label: ins.name })}
-                  className="group flex translate-y-3 items-center gap-2 rounded-full border border-hair bg-tint/[.035] px-3.5 py-2 text-[.9375rem] font-medium text-fg-2 opacity-0 transition-all duration-300 ease-brand hover:-translate-y-[3px] hover:border-brand-2/50 hover:bg-tint/[.07] hover:text-fg"
+                  className="group relative flex min-h-[44px] translate-y-3 items-center gap-2 overflow-hidden rounded-full border border-hair bg-tint/[.035] px-3.5 py-2 text-[.9375rem] font-medium text-fg-2 opacity-0 transition-all duration-300 ease-brand hover:-translate-y-[3px] hover:border-brand-2/50 hover:bg-tint/[.07] hover:text-fg active:translate-y-0 active:scale-[.96] active:duration-[90ms]"
                 >
+                  <span className="sheen-layer group-hover:animate-sheen-pass" aria-hidden="true" />
                   <Icon
                     name={ins.icon}
                     size={16}
-                    className="text-accent-ink transition-transform duration-300 ease-brand group-hover:scale-110"
+                    className="relative z-[1] text-accent-ink transition-transform duration-300 ease-brand group-hover:-translate-y-[2px] group-hover:scale-110"
                   />
-                  {ins.name.replace('Seguro ', '')}
+                  <span className="relative z-[1]">{ins.name.replace('Seguro ', '')}</span>
                 </Link>
               ))}
               <Link
                 href="/#seguros"
-                className="flex translate-y-3 items-center gap-1.5 rounded-full px-3 py-2 text-[.9375rem] font-semibold text-accent-ink opacity-0 transition-colors duration-300 hover:text-fg"
+                className="group flex min-h-[44px] translate-y-3 items-center gap-1.5 rounded-full px-3 py-2 text-[.9375rem] font-semibold text-accent-ink opacity-0 transition-colors duration-300 hover:text-fg active:scale-[.96] active:duration-[90ms]"
               >
                 Ver todos
-                <Icon name="arrow-right" size={15} />
+                <Icon
+                  name="arrow-right"
+                  size={15}
+                  className="transition-transform duration-300 ease-brand group-hover:translate-x-[4px]"
+                />
               </Link>
             </div>
           </div>
         </div>
 
         {/* ------------------------------------------------------------ coluna 2 */}
-        <div className="relative flex justify-center lg:justify-end">
+        {/* Parallax leve do conjunto: o visual sobe um pouco mais devagar que o
+            texto ao rolar. `data-speed` só age com o ScrollSmoother ligado, ou
+            seja, nunca em toque nem em movimento reduzido — que é exatamente
+            onde ele não deveria mesmo agir. O valor é discreto de propósito: o
+            visual não pode sair da linha do título. */}
+        <div data-speed="0.94" className="relative flex justify-center lg:justify-end">
           <HeroVisual />
         </div>
       </div>

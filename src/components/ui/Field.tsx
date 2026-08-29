@@ -17,6 +17,12 @@ interface Props {
   error?: string;
   hint?: string;
   full?: boolean;
+  /**
+   * Faz o campo esticar para ocupar a altura que sobrar do contêiner. Serve
+   * para o textarea de uma coluna que precisa terminar na mesma linha da
+   * coluna vizinha — é o que mantém a seção de contato simétrica.
+   */
+  grow?: boolean;
   autoComplete?: string;
   rows?: number;
   inputMode?: 'text' | 'numeric' | 'tel' | 'email';
@@ -44,6 +50,7 @@ export function Field({
   error,
   hint,
   full,
+  grow,
   autoComplete,
   rows = 4,
   inputMode,
@@ -67,7 +74,7 @@ export function Field({
     type === 'number' ? 'number' : type === 'date' ? 'date' : type === 'email' ? 'email' : type === 'tel' ? 'tel' : 'text';
 
   return (
-    <div className={cn('flex flex-col gap-2', full && 'sm:col-span-2')}>
+    <div className={cn('flex flex-col gap-2', full && 'sm:col-span-2', grow && 'min-h-0 flex-1')}>
       <label htmlFor={id} className="text-[.9375rem] font-medium text-fg-2">
         {label}
         {required && (
@@ -77,7 +84,7 @@ export function Field({
         )}
       </label>
 
-      <div className="relative">
+      <div className={cn('relative', grow && 'flex min-h-0 flex-1 flex-col')}>
         {type === 'textarea' ? (
           <textarea
             id={id}
@@ -89,7 +96,12 @@ export function Field({
             rows={rows}
             aria-invalid={showError || undefined}
             aria-describedby={describedBy || undefined}
-            className={cn(controlBase, 'min-h-[124px] resize-y py-3.5 text-[1.0625rem] leading-relaxed', showError ? 'border-red-400/70' : 'border-hair')}
+            className={cn(
+              controlBase,
+              'min-h-[124px] resize-y py-3.5 text-[1.0625rem] leading-relaxed',
+              grow && 'h-full flex-1',
+              showError ? 'border-red-400/70' : 'border-hair',
+            )}
           />
         ) : type === 'select' ? (
           <>

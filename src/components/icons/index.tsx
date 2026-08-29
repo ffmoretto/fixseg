@@ -47,8 +47,14 @@ export type IconName =
   | 'check'
   | 'alert'
   | 'quote'
+  | 'star'
   | 'spark'
   | 'clock'
+  | 'calculator'
+  | 'percent'
+  | 'trending-up'
+  | 'trending-down'
+  | 'equal'
   | 'map-pin'
   | 'mail'
   | 'phone'
@@ -261,6 +267,16 @@ const paths: Record<IconName, React.ReactNode> = {
       transform="translate(-1 -1) scale(.94)"
     />
   ),
+  /* Estrela CHEIA (fill), usada nas notas de avaliação. A escala parcial de uma
+     nota como 4,7 é feita por recorte de largura no componente, não por meia
+     estrela desenhada — assim qualquer fração fica correta. */
+  star: (
+    <path
+      fill="currentColor"
+      data-icon-accent
+      d="M12 2.9l2.72 5.51 6.08.89-4.4 4.29 1.04 6.05L12 16.78l-5.44 2.86 1.04-6.05-4.4-4.29 6.08-.89z"
+    />
+  ),
   spark: (
     <>
       <path {...S} data-icon-accent d="M12 3.8l1.7 4.9 4.9 1.7-4.9 1.7L12 17l-1.7-4.9L5.4 10.4l4.9-1.7z" />
@@ -273,6 +289,33 @@ const paths: Record<IconName, React.ReactNode> = {
       <path {...S} data-icon-accent d="M12 7.6V12l3.2 2" />
     </>
   ),
+  calculator: (
+    <>
+      <rect {...S} x="4.6" y="2.8" width="14.8" height="18.4" rx="2.6" />
+      <rect {...S} x="7.6" y="5.8" width="8.8" height="3.4" rx="1.1" />
+      <path {...S} data-icon-accent d="M8.4 12.6h.01M12 12.6h.01M15.6 12.6h.01M8.4 16.2h.01M12 16.2h.01M15.6 16.2h.01" />
+    </>
+  ),
+  percent: (
+    <>
+      <path {...S} data-icon-accent d="M18.4 5.6 5.6 18.4" />
+      <circle {...S} cx="8.1" cy="8.1" r="2.5" />
+      <circle {...S} cx="15.9" cy="15.9" r="2.5" />
+    </>
+  ),
+  'trending-up': (
+    <>
+      <path {...S} data-icon-accent d="M3.6 16.4 9.2 10.8l3.2 3.2 7-7" />
+      <path {...S} d="M14.6 7h4.8v4.8" />
+    </>
+  ),
+  'trending-down': (
+    <>
+      <path {...S} data-icon-accent d="M3.6 7.6 9.2 13.2l3.2-3.2 7 7" />
+      <path {...S} d="M14.6 17h4.8v-4.8" />
+    </>
+  ),
+  equal: <path {...S} data-icon-accent d="M5.6 9.6h12.8M5.6 14.4h12.8" />,
   'map-pin': (
     <>
       <path {...S} d="M12 21c4-4.4 6.2-7.5 6.2-10.4A6.2 6.2 0 0 0 5.8 10.6C5.8 13.5 8 16.6 12 21Z" />
