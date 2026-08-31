@@ -175,11 +175,19 @@ export function Footer() {
                   </span>
                 </li>
               )}
+              {/* O horário COMPLETO mora aqui. A seção de contato mostrava a
+                  mesma tabela em um cartão; a duplicidade foi removida de lá, e
+                  o rodapé passou a listar todas as faixas em vez de só a
+                  primeira. */}
               {site.hours.length > 0 && (
                 <li className="flex items-start gap-2.5 text-fg-3">
                   <Icon name="clock" size={16} className="mt-0.5 shrink-0 text-accent-ink" />
-                  <span>
-                    {site.hours[0].label}: {site.hours[0].value}
+                  <span className="flex flex-col gap-1">
+                    {site.hours.map((h) => (
+                      <span key={h.label}>
+                        {h.label}: <span className="text-fg-2">{h.value}</span>
+                      </span>
+                    ))}
                   </span>
                 </li>
               )}

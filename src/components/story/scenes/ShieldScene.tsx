@@ -168,6 +168,15 @@ const orbit: { icon: IconName; angle: number }[] = [
  *
  * Não há `data-scene-risk` aqui: este capítulo não tem imprevisto para mostrar,
  * ele é a resposta aos cinco anteriores. Tudo o que se move é construção.
+ *
+ * -----------------------------------------------------------------------------
+ * O CASO ACONTECE NA TELA (atores, ver `data-move-*` em StoryScroll.tsx)
+ * -----------------------------------------------------------------------------
+ *   construção  os anéis e as linhas de convergência ENTRAM GIRANDO em volta do
+ *               eixo do emblema e assentam;
+ *   proteção    o escudo SOBE DA PLATAFORMA e o check é desenhado; os seis
+ *               ícones CHEGAM DE FORA PARA DENTRO e assentam na órbita, um
+ *               depois do outro.
  */
 export function ShieldScene() {
   return (
@@ -257,8 +266,21 @@ export function ShieldScene() {
           ))}
         </g>
 
-        {/* ------------------- anéis internos girando + energia (depth .5) */}
+        {/* ------------------- anéis internos girando + energia (depth .5) ==
+            ATOR — os anéis e as linhas de convergência ENTRAM GIRANDO: o
+            conjunto parte um pouco menor e torcido e assenta no eixo do
+            emblema. A origem é o centro do quadro, que é o centro de todas
+            essas peças (elas são concêntricas em CX/CY), e o parallax fica no
+            grupo de fora porque as duas coisas escrevem `transform`. */}
         <g data-depth="0.5">
+          <g
+            data-move-when="build"
+            data-move-rot="-26"
+            data-move-scale="0.84"
+            data-move-origin="50% 50%"
+            data-move-dur="0.95"
+            data-move-ease="power2.out"
+          >
           <Anel r={170} ry={122} dash="30 18" dur="34s" width={1.6} opacity={0.3} />
           <Anel r={150} ry={108} dash="4 12" dur="24s" width={1.4} opacity={0.42} reverse />
           <Anel r={128} ry={92} dash="52 34" dur="17s" width={2.2} opacity={0.5} />
@@ -302,6 +324,7 @@ export function ShieldScene() {
                 />
               );
             })}
+          </g>
           </g>
         </g>
 
@@ -351,8 +374,23 @@ export function ShieldScene() {
           <Contact id={ID} x={CX} y={322} rx={128} ry={13} opacity={0.85} />
         </g>
 
-        {/* ===================================================== o escudo == */}
+        {/* ===================================================== o escudo ==
+            ATOR — o escudo SOBE DA PLATAFORMA. O beat de proteção leva o ator
+            PARA o valor declarado, então o emblema é desenhado na cota final e
+            um grupo interno ESTÁTICO o afunda 24 unidades: o ator sobe essas 24
+            e ele emerge da base. Como o afundamento vive no atributo
+            `transform`, o modo sem movimento continua coerente — o escudo
+            apenas apoia um pouco mais fundo no tampo.
+            O emblema inteiro sobe junto (brilho, pulso, chapa e check): é uma
+            peça só, e o check continua sendo desenhado pelo DrawSVG. */}
         <g data-scene-shield>
+          <g
+            data-move-when="shield"
+            data-move-y="-24"
+            data-move-dur="0.52"
+            data-move-ease="power3.out"
+          >
+          <g transform="translate(0 24)">
           {/* brilho difuso atrás: o escudo não é um recorte, ele emite */}
           <ellipse
             cx={CX}
@@ -447,35 +485,62 @@ export function ShieldScene() {
             vectorEffect="non-scaling-stroke"
             filter={`url(#${ID}-glow)`}
           />
+          </g>
+          </g>
         </g>
       </Scene>
 
       {/* ícones orbitando o escudo — HTML sobre o SVG para herdar tipografia.
-          Três camadas de propósito: a de fora carrega a POSIÇÃO (e o recuo de
-          meia caixa), a do meio é o alvo do orquestrador (`data-scene-orbit`,
-          que entra com escala) e a de dentro tem a flutuação própria. Se as
-          três vivessem no mesmo elemento, a animação CSS de `transform`
-          sobrescreveria a entrada do GSAP e o recuo de centralização. */}
+          Quatro camadas de propósito: a de fora carrega a POSIÇÃO (e o recuo de
+          meia caixa), a seguinte é o ATOR que traz o ícone de fora para dentro,
+          a terceira é o alvo do orquestrador (`data-scene-orbit`, que entra com
+          escala) e a de dentro tem a flutuação própria. Se duas dessas coisas
+          vivessem no mesmo elemento, uma sobrescreveria o `transform` da outra.
+
+          ATORES — os ícones CHEGAM DE FORA PARA DENTRO, não aparecem no lugar.
+          O afastamento inicial é radial e mora no `transform` inline do próprio
+          elemento de órbita: o GSAP lê esse deslocamento ao assumir a peça e o
+          preserva, e no modo sem movimento ele é limpo junto com os outros
+          estilos — os ícones nascem exatamente sobre a trilha. O ator apenas
+          desfaz o afastamento, com durações escalonadas para as seis chegadas
+          não serem uma só. */}
       <div className="pointer-events-none absolute inset-0">
         {orbit.map((o, i) => {
           const rad = (o.angle * Math.PI) / 180;
-          const x = xy(50 + 40 * Math.cos(rad));
-          const y = xy(50 + 40 * Math.sin(rad));
+          const cos = Math.cos(rad);
+          const sin = Math.sin(rad);
+          const x = xy(50 + 40 * cos);
+          const y = xy(50 + 40 * sin);
+          /* deslocamento radial de partida, em px da tela (o ícone é HTML) */
+          const fx = xy(30 * cos);
+          const fy = xy(30 * sin);
           return (
             <div
               key={o.icon}
               className="absolute -translate-x-1/2 -translate-y-1/2"
               style={{ left: `${x}%`, top: `${y}%` }}
             >
-              <div data-scene-orbit data-orbit-index={i}>
+              <div
+                data-move-when="shield"
+                data-move-x={xy(-30 * cos)}
+                data-move-y={xy(-30 * sin)}
+                data-move-dur={xy(0.5 + i * 0.07)}
+                data-move-ease="power2.out"
+              >
                 <div
-                  className="animate-float-y grid h-11 w-11 place-items-center rounded-xl border border-hair bg-panel/[.9] text-accent-ink shadow-soft backdrop-blur-sm"
-                  style={{
-                    animationDuration: `${xy(5 + (i % 3) * 0.9)}s`,
-                    animationDelay: `${xy(i * 0.55)}s`,
-                  }}
+                  data-scene-orbit
+                  data-orbit-index={i}
+                  style={{ transform: `translate(${fx}px, ${fy}px)` }}
                 >
-                  <Icon name={o.icon} size={20} />
+                  <div
+                    className="animate-float-y grid h-11 w-11 place-items-center rounded-xl border border-hair bg-panel/[.9] text-accent-ink shadow-soft backdrop-blur-sm"
+                    style={{
+                      animationDuration: `${xy(5 + (i % 3) * 0.9)}s`,
+                      animationDelay: `${xy(i * 0.55)}s`,
+                    }}
+                  >
+                    <Icon name={o.icon} size={20} />
+                  </div>
                 </div>
               </div>
             </div>

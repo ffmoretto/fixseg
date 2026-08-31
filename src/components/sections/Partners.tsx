@@ -52,19 +52,29 @@ function CartaoParceiro({ parceiro }: { parceiro: Insurer }) {
   return (
     <div
       className={cn(
-        'group/parceiro grid h-[104px] w-[196px] place-items-center rounded-2xl border border-hair',
-        'bg-tint/[.03] px-5 transition-[background-color,border-color,transform] duration-500 ease-brand',
-        'hover:-translate-y-[3px] hover:border-brand-2/35 hover:bg-tint/[.06] md:h-[112px] md:w-[212px]',
+        'group/parceiro grid h-[104px] w-[196px] place-items-center rounded-2xl border transition-[border-color,transform,box-shadow] duration-500 ease-brand',
+        'hover:-translate-y-[3px] md:h-[112px] md:w-[212px]',
+        temLogo
+          ? /* PLACA CLARA nos dois temas: os arquivos das seguradoras são tinta
+               escura sobre transparente, e sobre fundo escuro desapareceriam.
+               Recolorir marca de terceiro não é opção. Ver `--logo-plate`. */
+            'border-hair bg-logo-plate px-4 shadow-card hover:border-brand-2/45 hover:shadow-lift'
+          : 'border-hair bg-tint/[.03] px-5 hover:border-brand-2/35 hover:bg-tint/[.06]',
       )}
     >
       {temLogo ? (
+        /* Todos os arquivos foram normalizados para a MESMA tela de 280×88 com
+           a mesma média geométrica de tinta (ver scripts/logos.py e o LEIA-ME
+           da pasta). Por isso aqui não há ajuste por logo: um único
+           `object-contain` já entrega todos no mesmo tamanho óptico. */
         <Image
           src={parceiro.logo as string}
           alt={parceiro.name}
-          width={140}
-          height={48}
+          width={280}
+          height={88}
           loading="lazy"
-          className="h-auto max-h-[48px] w-auto max-w-[140px] object-contain opacity-70 transition-opacity duration-500 group-hover/parceiro:opacity-100"
+          sizes="212px"
+          className="h-auto w-full max-w-[152px] object-contain transition-transform duration-500 ease-brand group-hover/parceiro:scale-[1.04] md:max-w-[164px]"
         />
       ) : (
         /* Cartão tipográfico: o nome é a peça gráfica. Fonte da marca, caixa

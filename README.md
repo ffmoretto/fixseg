@@ -282,6 +282,32 @@ capítulo ficam em `src/config/story.ts` — para trocar o roteiro, basta editar
 6.000px de rolagem e cansava antes do fim. A mesma quantidade de beats, menos estrada
 entre eles. Para deixar mais lento ou mais rápido, é esse número.
 
+**Os atores: o caso ACONTECE na tela.** Não basta o risco aparecer — o carro
+precisa chegar rodando e ser jogado para trás, o volume precisa tombar, a chama
+precisa nascer pequena e crescer. Para isso existe um passo no orquestrador
+chamado *movimento dos atores*: cada cena declara o movimento em atributos e a
+timeline executa, sem que uma precise conhecer a outra.
+
+| Atributo | Papel |
+| --- | --- |
+| `data-move-when="build\|risk\|shield"` | em que beat acontece |
+| `data-move-x` / `data-move-y` | deslocamento, em px do viewBox (560×400) |
+| `data-move-rot` | rotação, em graus |
+| `data-move-scale` | escala final |
+| `data-move-dur` | duração, em unidades da timeline |
+| `data-move-ease` | easing do GSAP |
+| `data-move-origin` | origem da transformação |
+
+Regra de leitura: em `build` o valor declarado é **de onde o elemento vem** (ele
+entra e assenta); em `risk` e `shield` é **para onde ele vai**.
+
+Duas armadilhas já resolvidas: `data-move-*` e `data-depth` **não podem estar no
+mesmo elemento** (os dois animam `transform` e brigam — use um grupo externo
+para o parallax e um interno para o ator); e, como o orquestrador só sabe levar
+um ator *para* um valor, uma peça que precisa NASCER pequena usa o helper local
+`Cresce` (ver `HomeScene.tsx`), que desenha no tamanho final e encolhe num grupo
+interno estático.
+
 **Câmera e parallax.** Dentro de cada cena existe uma camada `[data-scene-camera]` que
 avança devagar sobre a ilustração enquanto o capítulo corre, e cada grupo do SVG leva um
 `data-depth` (fundo perto de `0.15`, primeiro plano perto de `1`) que o orquestrador
@@ -540,7 +566,70 @@ basta condicionar a renderização de `src/components/layout/Analytics.tsx` ao a
 
 ---
 
-## 6. A calculadora de bônus
+## 6. Os logos dos parceiros e a faixa de versículos
+
+### Como os logos foram padronizados
+
+Os arquivos chegaram como impressões de página em PDF (cabeçalho e rodapé do
+navegador em volta de uma imagem). `scripts/logos.py` faz o caminho inteiro e
+pode ser rodado de novo quando chegarem novos parceiros:
+
+1. **Reconstrução** — `pdfimages` extrai a imagem original de dentro do PDF, sem
+   a moldura da página; quando o PDF traz duas imagens (RGB + máscara cinza), as
+   duas são recombinadas para devolver a transparência. Quando o logo é vetor na
+   página, o script renderiza a 600dpi e corta as faixas de cabeçalho e rodapé.
+2. **Recorte** — cada logo é aparado até a tinta, em duas passadas (alfa e
+   branco), porque parte dos arquivos vem com fundo branco chapado.
+3. **Normalização óptica** — o que padroniza o tamanho não é a altura nem a
+   largura: é a **média geométrica** (raiz de largura × altura). Igualar só a
+   altura faz um logotipo horizontal e largo (Bradesco, 6,2:1) parecer gigante
+   ao lado de uma marca quadrada (HDI, 1:1); igualar só a largura inverte o
+   problema. Com a média geométrica as duas ocupam a mesma "quantidade de tinta"
+   no olho. Depois disso, limites de largura e altura garantem que nada estoure a
+   caixa, e a ampliação é limitada a 1,45× — acima disso o logo fica visivelmente
+   macio, e é melhor aceitá-lo um pouco menor.
+
+Todos saem na MESMA tela de 280×88 (o dobro da caixa de exibição), o que
+dispensa ajuste por logo no componente: um único `object-contain` entrega todos
+no mesmo tamanho óptico.
+
+**A placa branca.** Os arquivos das seguradoras são tinta escura sobre
+transparente — é assim que cada companhia distribui a própria marca. Sobre fundo
+escuro eles desapareceriam, e recolorir marca de terceiro não é uma opção. Por
+isso o cartão do carrossel tem placa branca nos DOIS temas (`--logo-plate`).
+
+### A faixa de versículos
+
+`src/config/verses.ts` e `src/components/layout/VerseBand.tsx` — uma faixa fina
+acima do rodapé, em todas as páginas, com um versículo por vez.
+
+- **Nunca repete.** Sorteio simples repete: com 18 versículos a repetição ao
+  longo de uma visita é certa. A faixa usa o modelo do **saco** — embaralha a
+  lista inteira (Fisher-Yates) e percorre do começo ao fim; só quando o último
+  sai é que um novo embaralhamento acontece, e nesse novo garante-se que o
+  primeiro não seja igual ao último exibido, para não repetir na emenda.
+- O saco fica no `localStorage`, então quem volta continua de onde parou. Se o
+  navegador bloquear o armazenamento, o componente sorteia na memória.
+- **Hidratação**: o sorteio não pode acontecer no render (`Math.random()` divide
+  servidor e cliente). O HTML do servidor traz sempre o índice 0 e o
+  embaralhamento começa depois da montagem. Pela mesma razão, o botão "ver outro
+  versículo" é **sempre** renderizado: condicioná-lo a `prefersReducedMotion()`
+  no JSX quebrava a hidratação (React #418), porque no servidor a preferência
+  ainda é desconhecida.
+- **Acessibilidade**: `aria-live="off"` (texto que troca sozinho não deve
+  interromper leitor de tela a cada 14s), a rotação para no hover e no foco, e o
+  botão dá controle explícito — é o que a WCAG 2.2.2 exige de conteúdo em
+  movimento. Com `prefers-reduced-motion`, a faixa mostra um versículo e não
+  troca mais.
+- **Tradução**: João Ferreira de Almeida, edição em **domínio público**. Escolha
+  deliberada: ARA, ARC, NVI e NAA são obras protegidas e exigiriam licença da
+  editora para publicação em site. Trocar de tradução exige obter autorização
+  antes.
+- Para desligar a faixa inteira: `verseBand.ativo = false`.
+
+---
+
+## 7. A calculadora de bônus
 
 `/calculadora-bonus` — a ferramenta de atração da página. O visitante informa a
 apólice que está vencendo e recebe a classe estimada da renovação.
@@ -583,7 +672,7 @@ rodapé). A calculadora também aparece no menu mobile e no rodapé.
 
 ---
 
-## 7. SEO
+## 8. SEO
 
 - Metadata, Open Graph e Twitter Card em `src/lib/seo.tsx`, herdados por todas as páginas.
 - Imagem de Open Graph gerada no servidor (`app/opengraph-image.tsx`) — sem arquivo
@@ -601,7 +690,7 @@ Para o SEO local funcionar, preencha `address.city` e `address.state` em `site.t
 
 ---
 
-## 8. Publicação
+## 9. Publicação
 
 O passo a passo completo — Vercel, túnel a partir do seu computador, Cloudflare Pages e
 servidor próprio — está em **[DEPLOY.md](./DEPLOY.md)**.
@@ -641,7 +730,7 @@ variável, a trava não existe e o site funciona normalmente.
 
 ---
 
-## 9. Verificações já realizadas
+## 10. Verificações já realizadas
 
 O projeto foi testado com navegador automatizado antes da entrega:
 
@@ -664,8 +753,12 @@ O projeto foi testado com navegador automatizado antes da entrega:
   capítulos cabem na área útil com folga em todas elas (`story-fit.mjs`).
 - **Calculadora de bônus:** os oito casos conhecidos da regra FENASEG conferidos por
   script, mais o preenchimento do formulário no navegador e a leitura do resultado.
-- **Seção de contato:** as duas colunas fecham exatamente na mesma linha, sem quebra de
-  palavra no e-mail nem no endereço.
+- **Seção de contato:** os dados de contato aparecem em UM só lugar da página (o rodapé).
+  A seção de contato ficou com o convite e o formulário, centrados.
+- **Carrossel de parceiros:** os 14 logos carregam (verificado por `naturalWidth`), saem
+  no mesmo tamanho óptico e leem nos dois temas.
+- **Faixa de versículos:** 41 trocas seguidas conferidas no navegador — 18 versículos
+  distintos, nenhuma repetição em sequência e nenhum ciclo com repetido.
 - **Desempenho:** tempo de quadro medido com a CPU 4× mais lenta, no celular, durante a
   rolagem da narrativa e do resto da página (`perf2.mjs`), antes e depois de cada
   alteração de animação.
@@ -687,12 +780,16 @@ O projeto foi testado com navegador automatizado antes da entrega:
 
 ---
 
-## 10. Próximos passos sugeridos
+## 11. Próximos passos sugeridos
 
-1. **Enviar a lista das seguradoras parceiras** (`content.ts` → `insurers`) e os arquivos
-   de logo em `/public/seguradoras/`. Sem a lista, a seção "Parceiros da FIXSEG" não
-   aparece. Enquanto os logos não chegarem, basta o nome: o carrossel mostra um cartão
-   tipográfico e troca pela imagem sozinho assim que o arquivo existir.
+1. **Fairfax**: o arquivo enviado é a versão clara da marca (texto branco, para fundo
+   escuro) e fica invisível sobre a placa branca do carrossel. Peça a versão escura sobre
+   fundo claro e descomente a linha em `content.ts` → `insurers`.
+   **Seguros Unimed, Swiss Re e Yelum** foram citados no envio, mas os arquivos não
+   chegaram — mande que eu processo do mesmo jeito.
+   **Cinco logos vieram em resolução baixa** (Sancor 166×43, Bradesco 330×53, Porto
+   250×58, Allianz 250×63, Mapfre 250×69). Funcionam, mas ficam levemente macios em tela
+   retina; se a seguradora tiver SVG ou PNG maior no manual de marca, vale trocar.
 2. **Ligar as avaliações do Google** (`GOOGLE_PLACES_API_KEY` + `GOOGLE_PLACE_ID`) para a
    seção "O que falam de nós" existir. Passo a passo na seção 5.
 3. **Confirmar o horário de atendimento** (`site.hours`) — é o único dado visível que não

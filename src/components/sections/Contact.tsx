@@ -3,16 +3,14 @@
 import { useRef, useState } from 'react';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/hooks/useReducedMotion';
-import { site, formattedAddress, mapsUrl } from '@/config/site';
 import { collectUtm, submitLead } from '@/services/leads';
-import { whatsappUrl, telUrl, mailUrl } from '@/lib/whatsapp';
 import { track } from '@/lib/analytics';
 import { cn, isValidEmail, isValidPhone, maskPhone } from '@/lib/utils';
-import Icon, { type IconName } from '@/components/icons';
+import Icon from '@/components/icons';
 import Field from '@/components/ui/Field';
 import Button from '@/components/ui/Button';
 import SectionHeading from '@/components/ui/SectionHeading';
-import Reveal, { RevealItem } from '@/components/ui/Reveal';
+import Reveal from '@/components/ui/Reveal';
 import SuccessCheck from '@/components/ui/SuccessCheck';
 
 const subjects = [
@@ -40,55 +38,6 @@ export function Contact() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState<{ ok: boolean; message: string } | null>(null);
-
-  const wa = whatsappUrl();
-  const tel = telUrl();
-  const mail = mailUrl(`Contato pelo site — ${site.shortName}`);
-  const address = formattedAddress();
-  const maps = mapsUrl();
-
-  /* `wide` = o cartão ocupa a linha inteira. E-mail e endereço são longos: em
-     meia largura o e-mail quebrava no meio da palavra ("...com.b / r") e o
-     endereço virava cinco linhas. WhatsApp e telefone são curtos e ficam lado
-     a lado. */
-  const channels: {
-    icon: IconName;
-    label: string;
-    value: string;
-    href?: string;
-    external?: boolean;
-    wide?: boolean;
-  }[] =
-    [
-      wa && site.contact.whatsapp
-        ? {
-            icon: 'whatsapp',
-            label: 'WhatsApp',
-            /* O número aparece no cartão de telefone e no rodapé. Repeti-lo
-               aqui fazia os dois primeiros cartões parecerem duplicados; o que
-               distingue este canal é a AÇÃO, não o número. */
-            value: 'Abrir conversa agora',
-            href: wa,
-            external: true,
-          }
-        : null,
-      tel && site.contact.phone
-        ? { icon: 'phone', label: 'Telefone', value: site.contact.phone, href: tel }
-        : null,
-      mail && site.contact.email
-        ? { icon: 'mail', label: 'E-mail', value: site.contact.email, href: mail, wide: true }
-        : null,
-      address
-        ? {
-            icon: 'map-pin',
-            label: 'Endereço',
-            value: address,
-            href: maps ?? undefined,
-            external: !!maps,
-            wide: true,
-          }
-        : null,
-    ].filter(Boolean) as never;
 
   const validate = () => {
     const next: Record<string, string> = {};
@@ -155,144 +104,31 @@ export function Contact() {
 
   return (
     <section id="contato" className="relative scroll-mt-24 py-section">
-      {/* Duas colunas de MESMA largura e mesma altura.
-          Antes eram .9fr/1.1fr com alinhamento ao topo: a coluna da esquerda
-          (título + quatro canais empilhados + horários) ficava ~250px mais
-          alta que o formulário, e a seção terminava com um bloco vazio no
-          canto inferior direito. Agora os canais ocupam duas colunas, o
-          formulário estica até o fim da linha e as duas colunas fecham na
-          mesma altura. */}
-      <div className="shell grid items-stretch gap-12 lg:grid-cols-2 lg:gap-14">
-        {/* informações */}
-        <div className="flex flex-col">
-          <SectionHeading
-            eyebrow="Contato"
-            title="Fale com quem entende do seu risco"
-            highlight="do seu risco"
-            subtitle="Responda o formulário ou escolha o canal que preferir. Atendemos pessoas físicas e empresas."
-          />
+      {/* UMA coluna, centrada.
+          Antes esta seção repetia WhatsApp, telefone, e-mail, endereço, horário
+          e redes sociais em cartões — tudo isso já está no rodapé, que é o
+          lugar canônico desses dados no site. Duas cópias da mesma informação
+          na mesma página é ruído, e obrigava a manter dois lugares em sincronia.
+          Aqui ficou só o que é exclusivo desta seção: o convite e o formulário.
+          Os canais de contato vivem no rodapé. */}
+      <div className="shell">
+        <SectionHeading
+          align="center"
+          eyebrow="Contato"
+          title="Fale com quem entende do seu risco"
+          highlight="do seu risco"
+          subtitle="Conte o que você precisa proteger e um especialista responde. Atendemos pessoas físicas e empresas."
+          className="mx-auto"
+        />
 
-          {channels.length > 0 && (
-            <Reveal stagger={0.08} className="mt-10 grid gap-3 sm:grid-cols-2">
-              {channels.map((c) => {
-                const inner = (
-                  <>
-                    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-hair bg-tint/[.035] text-accent-ink transition-all duration-400 ease-brand group-hover/ch:border-brand-2/45">
-                      <Icon name={c.icon} size={19} />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-[.8125rem] font-semibold uppercase tracking-[0.16em] text-fg-4">
-                        {c.label}
-                      </span>
-                      <span
-                        className={cn(
-                          'mt-1 block font-medium text-fg',
-                          c.wide ? 'break-words text-[1rem]' : 'text-[1rem] sm:whitespace-nowrap',
-                        )}
-                      >
-                        {c.value}
-                      </span>
-                    </span>
-                    {c.href && (
-                      <Icon
-                        name="arrow-up-right"
-                        size={16}
-                        className="ml-auto mt-1 shrink-0 text-fg-4 transition-all duration-400 ease-brand group-hover/ch:translate-x-0.5 group-hover/ch:text-accent-ink"
-                      />
-                    )}
-                  </>
-                );
-
-                return (
-                  <RevealItem
-                    key={c.label}
-                    anim="left"
-                    className={cn('min-w-0', c.wide && 'sm:col-span-2')}
-                  >
-                    {c.href ? (
-                      <a
-                        href={c.href}
-                        {...(c.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
-                        onClick={() =>
-                          track(c.icon === 'whatsapp' ? 'whatsapp_click' : 'phone_click', {
-                            placement: 'contato',
-                          })
-                        }
-                        className="group/ch surface flex h-full items-start gap-4 p-5 transition-[border-color,transform] duration-400 ease-brand hover:-translate-y-0.5 hover:border-brand-2/35"
-                      >
-                        {inner}
-                      </a>
-                    ) : (
-                      <div className="surface flex h-full items-start gap-4 p-5">{inner}</div>
-                    )}
-                  </RevealItem>
-                );
-              })}
-            </Reveal>
-          )}
-
-          {/* horários — `lg:mt-auto` empurra o bloco para o rodapé da coluna,
-              que é o que faz as duas colunas terminarem na mesma linha. */}
-          {site.hours.length > 0 && (
-            <Reveal anim="up" delay={0.1} className="mt-6 lg:mt-auto lg:pt-6">
-              <div className="surface p-6">
-                <p className="flex items-center gap-2 text-[.8125rem] font-semibold uppercase tracking-[0.16em] text-fg-4">
-                  <Icon name="clock" size={14} className="text-accent-ink" />
-                  Horário de atendimento
-                </p>
-                <dl className="mt-4 flex flex-col gap-2.5">
-                  {site.hours.map((h) => (
-                    <div key={h.label} className="flex items-baseline justify-between gap-4">
-                      <dt className="text-[.96875rem] text-fg-3">{h.label}</dt>
-                      <dd className="text-[.96875rem] font-medium text-fg">{h.value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-            </Reveal>
-          )}
-
-          {/* redes sociais */}
-          {Object.values(site.social).some(Boolean) && (
-            <Reveal anim="up" delay={0.15} className="mt-6">
-              <div className="flex items-center gap-2.5">
-                {(
-                  [
-                    ['instagram', 'Instagram'],
-                    ['facebook', 'Facebook'],
-                    ['linkedin', 'LinkedIn'],
-                    ['youtube', 'YouTube'],
-                    ['tiktok', 'TikTok'],
-                  ] as const
-                ).map(([key, label]) => {
-                  const url = site.social[key];
-                  if (!url) return null;
-                  return (
-                    <a
-                      key={key}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={label}
-                      className="grid h-11 w-11 place-items-center rounded-full border border-hair text-fg-3 transition-all duration-300 ease-brand hover:-translate-y-0.5 hover:border-brand-2/55 hover:text-fg"
-                    >
-                      <Icon name={key} size={18} />
-                    </a>
-                  );
-                })}
-              </div>
-            </Reveal>
-          )}
-        </div>
-
-        {/* formulário */}
-        <Reveal anim="rise" className="flex min-w-0 flex-col">
+        <div className="mx-auto mt-12 w-full max-w-[46rem]">
+          <Reveal anim="rise" className="flex min-w-0 flex-col">
           {sent?.ok ? (
             <div
               data-contact-success
               role="status"
               aria-live="polite"
-              className="surface-gradient-border relative flex h-full flex-col items-center justify-center overflow-hidden px-7 py-14 text-center md:px-12"
+              className="surface-gradient-border relative flex flex-col items-center justify-center overflow-hidden px-7 py-14 text-center md:px-12"
             >
               <div
                 aria-hidden="true"
@@ -323,7 +159,7 @@ export function Contact() {
               ref={formRef}
               onSubmit={onSubmit}
               noValidate
-              className="surface flex h-full flex-col p-6 md:p-9"
+              className="surface flex flex-col p-6 md:p-9"
               aria-label="Formulário de contato"
             >
               <div className="grid gap-5 sm:grid-cols-2">
@@ -465,7 +301,8 @@ export function Contact() {
               </p>
             </form>
           )}
-        </Reveal>
+          </Reveal>
+        </div>
       </div>
     </section>
   );

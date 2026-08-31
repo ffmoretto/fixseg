@@ -92,6 +92,14 @@
   --alert: 201 92 12;
   --alert-2: 245 158 66;
 
+  /* PLACA DOS LOGOS DAS SEGURADORAS.
+     Os arquivos de logo das companhias são tinta escura sobre transparente —
+     é assim que cada seguradora distribui a própria marca. Sobre fundo escuro
+     eles simplesmente desaparecem, e recolorir marca de terceiro não é uma
+     opção. Por isso o cartão do carrossel tem placa clara nos DOIS temas; no
+     escuro ela é levemente rebaixada para não ofuscar. */
+  --logo-plate: 255 255 255;
+
   /* brilhos decorativos */
   --glow-a: radial-gradient(circle, rgba(11, 100, 252, 0.14) 0%, rgba(11, 100, 252, 0.04) 45%, transparent 70%);
   --glow-b: radial-gradient(circle, rgba(2, 179, 249, 0.13) 0%, rgba(2, 179, 249, 0.03) 50%, transparent 72%);
@@ -167,6 +175,14 @@
   /* alerta das ilustrações — ver a explicação no bloco do tema claro */
   --alert: 255 138 40;
   --alert-2: 255 201 128;
+
+  /* Placa dos logos: BRANCO também no tema escuro.
+     Parte dos arquivos das seguradoras traz um fundo branco chapado dentro da
+     própria imagem (Avla, Azul, HDI, MetLife). Com a placa levemente rebaixada,
+     esse branco interno aparecia como um retângulo mais claro dentro do cartão.
+     Branco puro faz os dois se fundirem — e é assim que um mural de logos
+     funciona de qualquer forma. */
+  --logo-plate: 255 255 255;
 
   --glow-a: radial-gradient(circle, rgba(11, 100, 252, 0.34) 0%, rgba(11, 100, 252, 0.08) 48%, transparent 70%);
   --glow-b: radial-gradient(circle, rgba(2, 179, 249, 0.3) 0%, rgba(2, 179, 249, 0.06) 50%, transparent 72%);

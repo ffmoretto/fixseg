@@ -1,41 +1,32 @@
 # Logos das seguradoras parceiras
 
-Esta pasta alimenta a seção **"Parceiros da FIXSEG"** — o carrossel contínuo de
-companhias na home.
+Os arquivos desta pasta são gerados por `scripts/logos.py` e **não devem ser
+editados à mão**. Todos saem na mesma tela de **280×88 px**, com a mesma média
+geométrica de tinta — é isso que faz marcas de proporções muito diferentes
+(Bradesco 6,2:1 e HDI 1:1) parecerem do mesmo tamanho no carrossel.
 
-## O logo é opcional
+## Para acrescentar um parceiro
 
-A companhia entra no carrossel **só com o nome**. Enquanto o arquivo do logo não
-chega, ela aparece como **cartão tipográfico**: o nome composto na fonte da marca,
-com o mesmo peso visual de um logo. Quando o arquivo for adicionado e o campo
-`logo` for preenchido, a imagem assume sozinha — nenhuma outra alteração é
-necessária.
+1. Coloque o arquivo de origem (PDF, PNG ou SVG) numa pasta de trabalho.
+2. Acrescente a entrada na lista `PARCEIROS` de `scripts/logos.py`.
+3. Rode `python3 scripts/logos.py`.
+4. Acrescente a entrada em `src/config/content.ts` → `insurers`.
 
-## Como adicionar uma companhia
+Se preferir preparar o arquivo por fora, o que o componente espera é: PNG ou SVG
+com **fundo transparente**, tinta aparada até a borda, e a peça centrada numa
+tela de 280×88.
 
-Registre em `src/config/content.ts`, na lista `insurers`:
+## Uso de marca
 
-```ts
-export const insurers: Insurer[] = [
-  { name: 'Nome da Seguradora' },                                   // sem logo ainda
-  { name: 'Outra Seguradora', url: 'https://…' },                   // sem logo, com site
-  { name: 'Com Logo', logo: '/seguradoras/com-logo.svg', url: 'https://…' },
-];
-```
+Só entram aqui logos de companhias com as quais a corretora efetivamente
+trabalha, e cujo uso da marca esteja autorizado. Nenhum logo é recolorido,
+distorcido ou recortado — o cartão do carrossel tem placa branca justamente
+para que cada marca apareça na cor original em qualquer tema.
 
-Para incluir o logo, salve o arquivo **nesta pasta** e aponte o caminho em `logo`.
+## Pendências conhecidas
 
-O carrossel se ajusta à quantidade: a partir de 8 companhias ele passa a usar
-**duas faixas em direções opostas**. Com a lista vazia, a seção não aparece no site.
-
-## Recomendações
-
-- Preferência por **SVG**; na falta dele, PNG com fundo transparente e pelo menos
-  300px de largura.
-- Prefira a versão monocromática do logo quando a seguradora disponibilizar: o
-  componente aplica uma leve transparência que ganha opacidade total no hover, e
-  o mesmo arquivo precisa funcionar no tema claro e no escuro.
-- Nomeie os arquivos em minúsculas e sem acentos (`porto-seguro.svg`, `hdi.svg`).
-- **Não inclua nenhuma marca sem autorização de uso.** Sem autorização, deixe o
-  campo `logo` vazio: o cartão tipográfico resolve, e o nome da companhia não
-  depende de licença de marca figurativa.
+- **Fairfax**: o arquivo recebido é a versão clara (texto branco), feita para
+  fundo escuro, e fica invisível sobre a placa branca. Falta a versão escura.
+- **Resolução baixa**: Sancor (166×43), Bradesco (330×53), Porto (250×58),
+  Allianz (250×63) e Mapfre (250×69). Funcionam, mas ficam levemente macios em
+  tela retina. Se a seguradora tiver SVG no manual de marca, vale trocar.

@@ -89,7 +89,7 @@ export function StoryScroll() {
            atributo original, e só a visibilidade é forçada. */
         const parts = someTargets(
           stage.querySelectorAll<SVGElement | HTMLElement>(
-            '[data-scene-fill], [data-scene-risk], [data-scene-shield], [data-scene-orbit]',
+            '[data-scene-fill], [data-scene-risk], [data-scene-shield], [data-scene-orbit], [data-move-when]',
           ),
         );
         if (parts) {
@@ -117,6 +117,15 @@ export function StoryScroll() {
             gsap.set(ch, { autoAlpha: i === 0 ? 1 : 0 });
             /* Cada capítulo tem um conjunto diferente de elementos, então os
                alvos são verificados antes de irem para o GSAP. */
+            /* A câmera parte de um filtro EXPLÍCITO, não de `none`.
+               O GSAP interpola `none` como zero: saindo de `none` para
+               `brightness(.86)`, a cena atravessava o quase-preto no meio da
+               transição e o instante do imprevisto piscava escuro. Com
+               `brightness(1) contrast(1)` a interpolação é numérica, de 1 para
+               0,86, e o escurecimento fica no tamanho pedido. */
+            const cam = ch.querySelector<HTMLElement>('[data-scene-camera]');
+            if (cam) gsap.set(cam, { filter: 'brightness(1) contrast(1)' });
+
             const initial: [ArrayLike<Element>, gsap.TweenVars][] = [
               /* massa da ilustração: entra materializando depois do contorno */
               [
@@ -190,6 +199,10 @@ export function StoryScroll() {
             const checks = ch.querySelectorAll('[data-shield-check]');
             const orbits = ch.querySelectorAll('[data-scene-orbit]');
             const depths = ch.querySelectorAll<SVGElement>('[data-depth]');
+            /* ATORES: elementos que se DESLOCAM para representar o caso do
+               capítulo (o carro que chega e bate, a caixa que cai, o fogo que
+               se espalha). Ver o bloco "movimento dos atores" mais abaixo. */
+            const atores = ch.querySelectorAll<SVGElement>('[data-move-when]');
 
             const kicker = ch.querySelector('[data-text="kicker"]');
             const title = ch.querySelector('[data-text="title"]');
@@ -378,6 +391,66 @@ export function StoryScroll() {
             /* respiro final do capítulo */
             tl.to({}, { duration: 0.3 });
 
+            /* --- movimento dos atores da cena -----------------------------
+               O que faz a história CONTAR o caso, em vez de só ilustrá-lo: o
+               carro entra rodando e é jogado para trás na batida; o volume
+               tomba; a chama sobe do rombo. Cada cena declara o movimento em
+               atributos e o orquestrador executa — assim a cena não precisa
+               conhecer a timeline, e a timeline não precisa conhecer a cena.
+
+                 data-move-when="build|risk|shield"  em que beat acontece
+                 data-move-x / -y                    deslocamento, em px do viewBox
+                 data-move-rot                       rotação, em graus
+                 data-move-scale                     escala final (1 = igual)
+                 data-move-dur                       duração, em unidades da timeline
+                 data-move-ease                      easing do GSAP
+                 data-move-origin                    origem da transformação
+
+               Regra de leitura: em `build` o valor declarado é DE ONDE o
+               elemento vem (ele entra e assenta); em `risk` e `shield` é PARA
+               ONDE ele vai. */
+            if (atores.length) {
+              atores.forEach((el) => {
+                const quando = el.getAttribute('data-move-when');
+                const alvo: gsap.TweenVars = {};
+                const x = Number(el.getAttribute('data-move-x') || 0);
+                const y = Number(el.getAttribute('data-move-y') || 0);
+                const rot = Number(el.getAttribute('data-move-rot') || 0);
+                const escala = el.getAttribute('data-move-scale');
+                const origem = el.getAttribute('data-move-origin');
+
+                if (x) alvo.x = x;
+                if (y) alvo.y = y;
+                if (rot) alvo.rotation = rot;
+                if (escala) alvo.scale = Number(escala);
+                if (origem) alvo.transformOrigin = origem;
+                if (!Object.keys(alvo).length) return;
+
+                const duracaoMov = Number(el.getAttribute('data-move-dur') || 0.5);
+                const suavizacao = el.getAttribute('data-move-ease') || 'power2.out';
+
+                const instante =
+                  quando === 'risk'
+                    ? momentoRisco
+                    : quando === 'shield'
+                      ? momentoEscudo
+                      : enter;
+
+                if (quando === 'build') {
+                  /* entra: sai do deslocamento declarado e assenta no lugar */
+                  const repouso: gsap.TweenVars = { duration: duracaoMov, ease: suavizacao };
+                  if ('x' in alvo) repouso.x = 0;
+                  if ('y' in alvo) repouso.y = 0;
+                  if ('rotation' in alvo) repouso.rotation = 0;
+                  if ('scale' in alvo) repouso.scale = 1;
+                  if (origem) repouso.transformOrigin = origem;
+                  tl.fromTo(el, alvo, repouso, instante);
+                } else {
+                  tl.to(el, { ...alvo, duration: duracaoMov, ease: suavizacao }, instante);
+                }
+              });
+            }
+
             /* --- câmera e parallax, do começo ao fim do capítulo -----------
                Duas camadas de movimento contínuo, atadas ao scroll: a câmera
                avança devagar sobre a cena e os planos se deslocam em
@@ -550,7 +623,11 @@ export function StoryScroll() {
                 {/* texto */}
                 <div
                   className={cn(
-                    'order-2 max-w-[34rem] lg:order-1',
+                    /* `min-w-0`: sem isso os chips de produto (que não quebram
+                       linha) forçam a largura mínima da coluna, ela estoura a
+                       célula da grade e empurra a cena para fora da tela no
+                       celular — medido: 544px de coluna no capítulo 05. */
+                    'order-2 min-w-0 max-w-[34rem] lg:order-1',
                     isFinal && 'order-2 text-center lg:order-2 lg:max-w-[46rem] lg:text-center',
                   )}
                 >

@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 
 import {
   Air,
@@ -55,6 +55,59 @@ const VAN_BODY = 'M-30 -10V-19H-18L-12 -30H20C24 -30 26 -28 26 -24V-10Z';
 
 /** Estilhaço de energia: mesma receita para os três fragmentos do impacto. */
 const shard = (d: string) => ({ d, ...heat(ID), opacity: 0.9 });
+
+/* ========================================================================== */
+/* ATOR QUE CRESCE                                                            */
+/* ========================================================================== */
+/**
+ * O orquestrador só sabe levar um ator PARA um valor: no beat de risco não
+ * existe "de onde". Para uma peça que precisa NASCER pequena e crescer — a teia
+ * no para-brisa, a marca de frenagem que se estende no asfalto —, o truque é
+ * desenhá-la no tamanho final e encolhê-la num grupo interno ESTÁTICO: o ator
+ * de fora cresce de 1 até `fator` e devolve a peça ao tamanho desenhado.
+ *
+ * Como o encolhimento vive no atributo `transform`, o modo sem movimento
+ * continua coerente (a peça aparece menor, mas no lugar certo), e o ator de
+ * fora fica sem transformação de base, então não briga com o GSAP.
+ *
+ * `px`/`py` é o ponto que fica PARADO — o ponto de impacto, o pneu que trava.
+ * Ele precisa ser exatamente o ponto para onde `origin` aponta na caixa do
+ * ator: encolher em torno desse ponto o mantém no mesmo lugar da caixa, então
+ * os dois continuam coincidindo depois do encolhimento.
+ */
+function Cresce({
+  fator,
+  px,
+  py,
+  origin,
+  dur = 0.5,
+  ease = 'power2.out',
+  children,
+}: {
+  fator: number;
+  px: number;
+  py: number;
+  origin: string;
+  dur?: number;
+  ease?: string;
+  children: ReactNode;
+}) {
+  return (
+    <g
+      data-move-when="risk"
+      data-move-scale={fator}
+      data-move-origin={origin}
+      data-move-dur={dur}
+      data-move-ease={ease}
+    >
+      {/* `xy()` porque o fator vem de uma divisão: servidor e navegador têm de
+          escrever exatamente a mesma string. */}
+      <g transform={`translate(${px} ${py}) scale(${xy(1 / fator)}) translate(${-px} ${-py})`}>
+        {children}
+      </g>
+    </g>
+  );
+}
 
 /**
  * Traço que CORRE.
@@ -337,9 +390,24 @@ function LightPole({
  * `dash-move` — devagar no fundo, rápido na frente, que é o que cria a
  * sensação de velocidade —, as rodas giram e as faíscas do impacto tremulam.
  *
- * No imprevisto: a dianteira estoura, o para-brisa vira teia, o capô amassa, o
- * farol apaga, o asfalto guarda a frenagem, a poeira sobe, o baú do caminhão
- * racha na descida da serra e um veículo da frota não volta para o pátio.
+ * -----------------------------------------------------------------------------
+ * O CASO ACONTECE NA TELA (atores, ver `data-move-*` em StoryScroll.tsx)
+ * -----------------------------------------------------------------------------
+ * É o capítulo em que o movimento faz mais diferença, e é o único em que os
+ * atores se empilham em três níveis:
+ *
+ *   construção  o carro ENTRA RODANDO pela esquerda e assenta em primeiro
+ *               plano; o caminhão entra pelo lado oposto; as faixas da pista
+ *               já correm desde o primeiro quadro (`Running`, em CSS);
+ *   imprevisto  o carro é JOGADO para trás e para cima, com um giro curto que
+ *               levanta a dianteira (easing seco, gesto de dois décimos); as
+ *               faíscas saltam e se abrem no ponto de contato, que fica PARADO
+ *               onde a batida aconteceu; a teia cresce no para-brisa a partir
+ *               do ponto do impacto; a frenagem se estende no asfalto a partir
+ *               do pneu; a poeira sobe e se espalha; o caminhão TOMBA, pivotando
+ *               sobre a roda da frente — o nariz afunda e a carreta levanta;
+ *   proteção    o conjunto se recompõe: o carro volta quase ao lugar e a
+ *               carreta se endireita.
  */
 export function RoadScene() {
   return (
@@ -460,21 +528,61 @@ export function RoadScene() {
       </g>
 
       {/* ================================ o caminhão (depth .4) == */}
+      {/* O `data-depth` fica no grupo de FORA e os atores em grupos de dentro:
+          parallax e ator escrevem os dois em `transform` e, no mesmo elemento,
+          um anularia o outro. */}
       <g data-depth="0.4">
-        <Contact id={ID} x={452} y={336} rx={92} ry={9} opacity={0.8} />
-        <g data-scene-fill>
-          <Truck x={450} y={336} scale={0.84} />
-          {/* farol do caminhão varrendo a pista à frente */}
-          <LightCone x={376} y={297} length={96} spread={22} angle={172} opacity={0.13} />
-          {/* o piso devolve a lanterna âmbar do caminhão */}
-          <ellipse
-            cx="522"
-            cy="342"
-            rx="14"
-            ry="9"
-            fill="rgb(var(--alert) / .2)"
-            filter={`url(#${ID}-soft)`}
-          />
+        {/* ATOR — o caminhão entra pelo lado OPOSTO ao do carro */}
+        <g
+          data-move-when="build"
+          data-move-x="420"
+          data-move-dur="1.1"
+          data-move-ease="power1.out"
+        >
+          <Contact id={ID} x={452} y={336} rx={92} ry={9} opacity={0.8} />
+          <g data-scene-fill>
+            {/* ATOR — O TOMBAMENTO NA SERRA. A carreta pivota sobre a roda da
+                frente (origem no canto inferior esquerdo da caixa): o nariz
+                AFUNDA no asfalto e a traseira levanta, e o baú racha no meio do
+                gesto. O `y` positivo é o que impede o efeito de caminhão
+                voando — sem ele, o pivô fica na linha do chão e o veículo
+                inteiro parece decolar. Na proteção ela se endireita quase por
+                completo. */}
+            <g
+              data-move-when="risk"
+              data-move-rot="-6.5"
+              data-move-x="-9"
+              data-move-y="5"
+              data-move-origin="0% 100%"
+              data-move-dur="0.3"
+              data-move-ease="power2.in"
+            >
+              <g
+                data-move-when="shield"
+                data-move-rot="5"
+                data-move-x="6"
+                data-move-y="-4"
+                data-move-origin="0% 100%"
+                data-move-dur="0.46"
+                data-move-ease="power2.inOut"
+              >
+                <Truck x={450} y={336} scale={0.84} />
+                {/* a fenda que abre no baú viaja junto com a carroceria */}
+                <Fracture d="M436 270L449 284L438 296L453 306" delay={0.3} />
+              </g>
+            </g>
+            {/* farol do caminhão varrendo a pista à frente */}
+            <LightCone x={376} y={297} length={96} spread={22} angle={172} opacity={0.13} />
+            {/* o piso devolve a lanterna âmbar do caminhão */}
+            <ellipse
+              cx="522"
+              cy="342"
+              rx="14"
+              ry="9"
+              fill="rgb(var(--alert) / .2)"
+              filter={`url(#${ID}-soft)`}
+            />
+          </g>
         </g>
       </g>
 
@@ -484,7 +592,41 @@ export function RoadScene() {
       </g>
 
       {/* ============================= o carro em primeiro plano (depth .9) */}
+      {/* TRÊS ATORES EMPILHADOS, um por gesto — nenhum deles no elemento que
+          leva o `data-depth`:
+            1. construção  o carro entra rodando pela esquerda e assenta;
+            2. imprevisto  o impacto o joga para trás e para cima, com um giro
+                           curto que levanta a dianteira (giro POSITIVO: com o
+                           pivô na base, é o lado esquerdo que sobe);
+            3. proteção    o conjunto se recompõe e ele volta quase ao lugar.
+          Os decalques da batida (teia no para-brisa, capô amassado, farol
+          apagado) moram DENTRO dos atores: são parte do carro e têm de viajar
+          com ele. Só as faíscas ficam de fora — o ponto de contato não anda. */}
       <g data-depth="0.9">
+        <g
+          data-move-when="build"
+          data-move-x="-560"
+          data-move-dur="1.2"
+          data-move-ease="power1.out"
+        >
+        <g
+          data-move-when="risk"
+          data-move-x="34"
+          data-move-y="-16"
+          data-move-rot="5"
+          data-move-origin="50% 100%"
+          data-move-dur="0.17"
+          data-move-ease="power4.out"
+        >
+        <g
+          data-move-when="shield"
+          data-move-x="-24"
+          data-move-y="12"
+          data-move-rot="-3.6"
+          data-move-origin="50% 100%"
+          data-move-dur="0.44"
+          data-move-ease="power2.inOut"
+        >
         <Contact id={ID} x={168} y={358} rx={118} ry={13} />
         <g data-scene-fill>
           <Car x={168} y={358} />
@@ -531,6 +673,45 @@ export function RoadScene() {
           delay={0.16}
         />
         </g>
+
+        {/* --- decalques da batida, presos ao carro --------------------- */}
+
+        {/* o vidro trinca: a teia NASCE no ponto de impacto e se abre a partir
+            dele. `px`/`py` é o centro da caixa da teia, que é onde o vidro
+            estourou — encolher e crescer em torno desse ponto mantém a origem
+            do estilhaço no lugar. */}
+        <Cresce fator={2.2} px={142.5} py={288.5} origin="50% 50%" dur={0.3} ease="power3.out">
+          <Fracture d="M134 281L143 289L130 295L139 302" delay={0.08} />
+          <Fracture d="M143 289L157 285" delay={0.1} />
+          <g data-scene-risk data-risk-delay="0.12">
+            <path
+              d="M143 289L136 275M143 289L152 300M143 289L128 286M137 279L149 277M133 293L136 300"
+              fill="none"
+              stroke="rgb(var(--brand-2) / .55)"
+              strokeWidth="1.1"
+              strokeLinecap="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          </g>
+        </Cresce>
+
+        {/* o capô amassa e o farol apaga */}
+        <g data-scene-risk data-risk-delay="0.16">
+          <path {...mass('deep')} d="M70 302L86 291L98 301L112 294V304L70 306Z" />
+          <path {...detail(0.4, 1.3)} d="M76 304L86 293M92 305L98 296M104 304L110 297" />
+          {/* o farol quebrado: o vão escuro no lugar da luz */}
+          <path d="M64 308L82 311V319L64 316Z" fill={INK.void} opacity=".8" />
+          <path
+            d="M64 308L82 319M82 311L64 316"
+            fill="none"
+            stroke="rgb(var(--brand-2) / .5)"
+            strokeWidth="1.2"
+            vectorEffect="non-scaling-stroke"
+          />
+        </g>
+        </g>
+        </g>
+        </g>
       </g>
 
       {/* O asfalto correndo debaixo do carro — a camada mais próxima e a que
@@ -565,98 +746,96 @@ export function RoadScene() {
 
       {/* ==================================================== o imprevisto == */}
 
-      {/* 0 — o impacto na dianteira: clarão, estilhaço de energia e faísca */}
-      <g data-scene-risk data-risk-delay="0">
-        <ellipse
-          cx="66"
-          cy="324"
-          rx="52"
-          ry="46"
-          fill="rgb(var(--brand-2) / .22)"
-          filter={`url(#${ID}-haze)`}
-        />
-        <ellipse
-          cx="66"
-          cy="324"
-          rx="30"
-          ry="26"
-          fill="rgb(var(--alert) / .28)"
-          filter={`url(#${ID}-haze)`}
-        />
-        <g filter={`url(#${ID}-glow)`}>
-          <path {...shard('M66 324L30 306L42 336Z')} />
-          <path {...shard('M66 324L44 350L64 348Z')} />
-          <path {...shard('M66 324L48 292L70 302Z')} />
+      {/* 0 — o impacto na dianteira: clarão, estilhaço de energia e faísca.
+             O grupo NÃO viaja com o carro: o ponto de contato fica onde a
+             batida aconteceu, e é o carro que recua a partir dele. O que se
+             move aqui é a ABERTURA do estilhaço — as faíscas saltam para fora
+             do ponto de impacto. */}
+      <g
+        data-move-when="risk"
+        data-move-scale="1.35"
+        data-move-origin="50% 50%"
+        data-move-dur="0.26"
+        data-move-ease="power3.out"
+      >
+        <g data-scene-risk data-risk-delay="0">
+          <ellipse
+            cx="66"
+            cy="324"
+            rx="52"
+            ry="46"
+            fill="rgb(var(--brand-2) / .22)"
+            filter={`url(#${ID}-haze)`}
+          />
+          <ellipse
+            cx="66"
+            cy="324"
+            rx="30"
+            ry="26"
+            fill="rgb(var(--alert) / .28)"
+            filter={`url(#${ID}-haze)`}
+          />
+          <g filter={`url(#${ID}-glow)`}>
+            <path {...shard('M66 324L30 306L42 336Z')} />
+            <path {...shard('M66 324L44 350L64 348Z')} />
+            <path {...shard('M66 324L48 292L70 302Z')} />
+          </g>
+          <Sparks x={66} y={324} count={8} radius={26} tone="alert" />
+          <Sparks x={66} y={324} count={5} radius={17} tone="brand" />
         </g>
-        <Sparks x={66} y={324} count={8} radius={34} tone="alert" />
-        <Sparks x={66} y={324} count={5} radius={22} tone="brand" />
       </g>
 
-      {/* 1 — o para-brisa vira teia */}
-      <Fracture d="M134 281L143 289L130 295L139 302" delay={0.08} />
-      <Fracture d="M143 289L157 285" delay={0.1} />
-      <g data-scene-risk data-risk-delay="0.12">
-        <path
-          d="M143 289L136 275M143 289L152 300M143 289L128 286M137 279L149 277M133 293L136 300"
-          fill="none"
-          stroke="rgb(var(--brand-2) / .55)"
-          strokeWidth="1.1"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-        />
-      </g>
-
-      {/* 2 — o capô amassa e o farol apaga */}
-      <g data-scene-risk data-risk-delay="0.16">
-        <path {...mass('deep')} d="M70 302L86 291L98 301L112 294V304L70 306Z" />
-        <path {...detail(0.4, 1.3)} d="M76 304L86 293M92 305L98 296M104 304L110 297" />
-        {/* o farol quebrado: o vão escuro no lugar da luz */}
-        <path d="M64 308L82 311V319L64 316Z" fill={INK.void} opacity=".8" />
-        <path
-          d="M64 308L82 319M82 311L64 316"
-          fill="none"
-          stroke="rgb(var(--brand-2) / .5)"
-          strokeWidth="1.2"
-          vectorEffect="non-scaling-stroke"
-        />
-      </g>
-
-      {/* 3 — o asfalto guarda a frenagem */}
+      {/* 1 — o asfalto guarda a frenagem: a marca SE ESTENDE a partir do pneu
+             que travou (origem no canto inferior esquerdo da caixa, que é onde
+             a roda estava quando a borracha começou a queimar). */}
       <g data-scene-risk data-risk-delay="0.2">
-        <path
-          d="M112 361C182 358 244 350 302 338"
-          fill="none"
-          stroke={`${INK.ink}`}
-          strokeWidth="6"
-          strokeLinecap="round"
-          strokeDasharray="34 14"
-          opacity=".5"
-        />
-        <path
-          d="M124 372C198 368 266 356 322 343"
-          fill="none"
-          stroke={`${INK.deep}`}
-          strokeWidth="4.5"
-          strokeLinecap="round"
-          strokeDasharray="26 15"
-          opacity=".6"
-        />
+        <Cresce fator={1.9} px={112} py={372} origin="0% 100%" dur={0.42}>
+          <path
+            d="M112 361C182 358 244 350 302 338"
+            fill="none"
+            stroke={`${INK.ink}`}
+            strokeWidth="6"
+            strokeLinecap="round"
+            strokeDasharray="34 14"
+            opacity=".5"
+          />
+          <path
+            d="M124 372C198 368 266 356 322 343"
+            fill="none"
+            stroke={`${INK.deep}`}
+            strokeWidth="4.5"
+            strokeLinecap="round"
+            strokeDasharray="26 15"
+            opacity=".6"
+          />
+        </Cresce>
       </g>
 
-      {/* 4 — a poeira que o impacto levanta, em cor de massa */}
+      {/* 2 — a poeira que o impacto levanta, em cor de massa: sobe e se
+             espalha a partir do pé da coluna. */}
       <g data-scene-risk data-risk-delay="0.26">
-        <Smoke id={ID} x={96} y={296} scale={0.9} />
-        <Smoke id={ID} x={44} y={350} scale={0.68} />
+        <g
+          data-move-when="risk"
+          data-move-y="-28"
+          data-move-scale="1.4"
+          data-move-origin="50% 100%"
+          data-move-dur="0.6"
+          data-move-ease="power1.out"
+        >
+          <Smoke id={ID} x={96} y={296} scale={0.9} />
+          <Smoke id={ID} x={44} y={350} scale={0.68} />
+        </g>
       </g>
 
-      {/* 5 — o tombamento na serra: o baú racha e a carroceria pende */}
-      <Fracture d="M436 270L449 284L438 296L453 306" delay={0.3} />
+      {/* 3 — o sentido do tombamento: a seta que marca o giro da carreta.
+             Fica FORA do ator que tomba, senão giraria junto e deixaria de
+             indicar coisa nenhuma. */}
       <g data-scene-risk data-risk-delay="0.34">
         <path {...accentStroke(1.8, 0.55)} strokeDasharray="6 7" d="M426 232A40 40 0 00396 260" />
         <path {...accent(0.85)} d="M404 250l-10 13 14-2z" />
       </g>
 
-      {/* 6 — o veículo da frota que não volta ao pátio: sobra a vaga vazia.
+      {/* 4 — o veículo da frota que não volta ao pátio: sobra a vaga vazia.
           A escala fica no grupo DE FORA e o `data-scene-risk` no grupo de
           dentro: o GSAP reescreve o `transform` do elemento que anima, e se a
           escala estivesse nele o furgão terminaria em tamanho de primeiro plano. */}

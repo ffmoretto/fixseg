@@ -35,12 +35,21 @@ const TORSO = 'M-19 -52C-19 -76 -12 -90 0 -90C12 -90 19 -76 19 -52L16 -32H-16Z';
  * A origem local é o CHÃO, no centro do corpo: `translate(x, y)` posiciona os
  * pés exatamente onde a figura toca a superfície, e `scale` muda a idade.
  *
- * `variant='ghost'` desenha a MESMA figura preenchida com a cor do painel e
- * contornada em tracejado, mais um véu ciano por dentro. Sobreposta à figura
- * sólida, ela a apaga e deixa só o contorno: é assim que o capítulo mostra a
- * ausência sem recorrer a nenhum símbolo mórbido. O véu ciano é o que mantém a
- * silhueta legível nos DOIS temas — com `--panel` puro, no tema escuro ela
- * sumia dentro do vão da porta.
+ * A ausência é contada em duas peças por cima da figura sólida, e não numa
+ * troca de aparência:
+ *
+ *   `veil`   a MESMA silhueta preenchida com a cor do painel, um pouco mais
+ *            generosa nos membros. É o apagador: dissolve a figura sólida.
+ *   `trace`  só o contorno tracejado e o véu ciano por dentro. É o corpo que
+ *            deixou de existir.
+ *
+ * As três — sólida, apagador e contorno — carregam os MESMOS `data-move-*` (ver
+ * AUSENCIA), então viajam juntas: a pessoa desliza para fora do lugar e, no
+ * mesmo gesto, deixa de ser corpo. Solto do contorno, o apagador ficaria à
+ * mostra como uma silhueta chapada e leria como mais uma pessoa na cena.
+ *
+ * O véu ciano do `trace` é o que mantém a silhueta legível nos DOIS temas: com
+ * `--panel` puro, no tema escuro ela sumia dentro do vão da porta.
  */
 function Figure({
   x,
@@ -56,49 +65,69 @@ function Figure({
   limb?: string;
   /** Braço esticado para o lado indicado — as mãos dadas da cena. */
   reach?: 'left' | 'right' | 'both';
-  variant?: 'solid' | 'ghost';
+  variant?: 'solid' | 'veil' | 'trace';
 }) {
   const armL = reach === 'left' || reach === 'both';
   const armR = reach === 'right' || reach === 'both';
-  const ghost = variant === 'ghost';
-
-  const limbColor = ghost ? 'rgb(var(--panel) / .92)' : limb;
-  const bodyFill = ghost ? { fill: 'rgb(var(--panel) / .92)' } : volume(ID);
 
   const legL = 'M-8 -36V-4';
   const legR = 'M8 -36V-4';
   const armLd = armL ? 'M-17 -74L-30 -44' : 'M-17 -74L-22 -42';
   const armRd = armR ? 'M17 -74L30 -44' : 'M17 -74L22 -42';
 
+  /* O apagador. A folga sobre a figura sólida é MÍNIMA (1px no membro, meio
+     ponto na cabeça): o bastante para cobrir o contorno de 1,3px que a sólida
+     carrega, e não mais — folga maior apareceria como uma auréola chapada em
+     volta do contorno tracejado, já que ele desenha na linha de centro do
+     membro e não na borda. */
+  if (variant === 'veil') {
+    const veu = 'rgb(var(--panel) / .94)';
+    return (
+      <g transform={`translate(${x} ${y}) scale(${scale})`}>
+        {[legL, legR].map((d) => (
+          <path key={d} d={d} stroke={veu} strokeWidth="14" strokeLinecap="round" fill="none" />
+        ))}
+        {[armLd, armRd].map((d) => (
+          <path key={d} d={d} stroke={veu} strokeWidth="11" strokeLinecap="round" fill="none" />
+        ))}
+        <path fill={veu} d={TORSO} />
+        <circle fill={veu} cx="0" cy="-104" r="14" />
+      </g>
+    );
+  }
+
+  /* O vazio que sobra: contorno tracejado e um véu ciano por dentro. */
+  if (variant === 'trace') {
+    return (
+      <g transform={`translate(${x} ${y}) scale(${scale})`}>
+        <path d={TORSO} fill="rgb(var(--brand-2) / .12)" />
+        <circle cx="0" cy="-104" r="13.5" fill="rgb(var(--brand-2) / .12)" />
+        <path {...accentStroke(1.5, 0.75)} strokeDasharray="5 5" d={TORSO} />
+        <circle {...accentStroke(1.5, 0.75)} strokeDasharray="5 5" cx="0" cy="-104" r="13.5" />
+        <path
+          {...accentStroke(1.4, 0.5)}
+          strokeDasharray="4 6"
+          d={`${legL}${legR}${armLd}${armRd}`}
+        />
+      </g>
+    );
+  }
+
   return (
     <g transform={`translate(${x} ${y}) scale(${scale})`}>
       {[legL, legR].map((d) => (
-        <path key={d} d={d} stroke={limbColor} strokeWidth="13" strokeLinecap="round" fill="none" />
+        <path key={d} d={d} stroke={limb} strokeWidth="13" strokeLinecap="round" fill="none" />
       ))}
       {[armLd, armRd].map((d) => (
-        <path key={d} d={d} stroke={limbColor} strokeWidth="10" strokeLinecap="round" fill="none" />
+        <path key={d} d={d} stroke={limb} strokeWidth="10" strokeLinecap="round" fill="none" />
       ))}
-      <path {...bodyFill} d={TORSO} />
-      <circle {...bodyFill} cx="0" cy="-104" r="13.5" />
+      <path {...volume(ID)} d={TORSO} />
+      <circle {...volume(ID)} cx="0" cy="-104" r="13.5" />
 
-      {ghost ? (
-        <g>
-          <path d={TORSO} fill="rgb(var(--brand-2) / .12)" />
-          <circle cx="0" cy="-104" r="13.5" fill="rgb(var(--brand-2) / .12)" />
-          <path {...accentStroke(1.5, 0.75)} strokeDasharray="5 5" d={TORSO} />
-          <circle {...accentStroke(1.5, 0.75)} strokeDasharray="5 5" cx="0" cy="-104" r="13.5" />
-          <path
-            {...accentStroke(1.4, 0.5)}
-            strokeDasharray="4 6"
-            d={`${legL}${legR}${armLd}${armRd}`}
-          />
-        </g>
-      ) : (
-        <g data-scene-draw>
-          <path {...outline(1.3, 0.3)} d={TORSO} />
-          <circle {...outline(1.3, 0.3)} cx="0" cy="-104" r="13.5" />
-        </g>
-      )}
+      <g data-scene-draw>
+        <path {...outline(1.3, 0.3)} d={TORSO} />
+        <circle {...outline(1.3, 0.3)} cx="0" cy="-104" r="13.5" />
+      </g>
     </g>
   );
 }
@@ -156,6 +185,24 @@ const ECG =
   'M30 76h48q8-10 16 0h16l6 14l10-52l10 66l8-28h14q10-16 20 0h104q8-10 16 0h16l6 14l10-52l10 66l8-28h14q10-16 20 0h44';
 
 /**
+ * Quanto a figura que se ausenta desliza no imprevisto, e quanto ela volta na
+ * proteção. Fica numa constante porque TRÊS peças precisam do mesmo movimento:
+ * a figura sólida, o véu que a apaga e o contorno tracejado. Se os números
+ * divergirem, o véu deixa de cobrir a sólida no meio do gesto e aparece uma
+ * aresta de corpo por baixo do contorno.
+ */
+const AUSENCIA = {
+  x: 26,
+  y: -11,
+  scale: 0.9,
+  /* a volta cancela quase todo o deslocamento: a família se reaproxima, mas a
+     cena não finge que nada aconteceu */
+  voltaX: -21,
+  voltaY: 9,
+  voltaScale: 1.08,
+};
+
+/**
  * Capítulo 01 — Vida.
  *
  * Camadas, do fundo para a frente:
@@ -166,9 +213,17 @@ const ECG =
  *   0,80  a família em contraluz e as sombras que ela projeta;
  *   0,95  o primeiro plano vivido: degrau, capacho, vaso, bola.
  *
- * No imprevisto a luz cai de verdade — a mancha do chão é comida pela sombra,
- * os fachos apagam, o traçado é lavado e vira uma reta —, a parede trinca e uma
- * das figuras deixa de ter corpo: sobra o contorno de onde ela estava.
+ * -----------------------------------------------------------------------------
+ * O CASO ACONTECE NA TELA (atores, ver `data-move-*` em StoryScroll.tsx)
+ * -----------------------------------------------------------------------------
+ *   construção  os dois adultos entram pelos lados e a criança vem de dentro
+ *               de casa, ainda pequena no quadro, até a família assentar;
+ *   imprevisto  a reta DESCE sobre o traçado até a linha de base; os dois
+ *               fachos da porta encolhem para dentro do vão e a mancha de luz
+ *               do chão se fecha; a figura que se ausenta DESLIZA para fora do
+ *               lugar e, no mesmo gesto, deixa de ter corpo — o apagador e o
+ *               contorno tracejado viajam colados nela;
+ *   proteção    os fachos e a mancha voltam a abrir e a família se reaproxima.
  */
 export function LifeScene() {
   return (
@@ -259,9 +314,45 @@ export function LifeScene() {
           das silhuetas, que é o que acontece em contraluz. Ficam fora do
           caminho da família de propósito — no imprevisto eles apagam, e um véu
           por cima das figuras as apagaria junto. */}
+      {/* ATORES — os fachos. No imprevisto cada um encolhe PARA O SEU ÁPICE
+          (a origem aponta para o canto onde ele nasce, junto à porta), e na
+          proteção volta a abrir. É o gesto que faz a luz "se fechar" em vez de
+          simplesmente escurecer. */}
       <g data-scene-fill data-depth="0.6">
-        <LightCone x={200} y={214} length={118} spread={30} angle={118} opacity={0.17} />
-        <LightCone x={360} y={214} length={118} spread={30} angle={62} opacity={0.17} />
+        <g
+          data-move-when="risk"
+          data-move-scale="0.3"
+          data-move-origin="100% 0%"
+          data-move-dur="0.42"
+          data-move-ease="power2.inOut"
+        >
+          <g
+            data-move-when="shield"
+            data-move-scale="3.2"
+            data-move-origin="100% 0%"
+            data-move-dur="0.5"
+            data-move-ease="power2.out"
+          >
+            <LightCone x={200} y={214} length={118} spread={30} angle={118} opacity={0.17} />
+          </g>
+        </g>
+        <g
+          data-move-when="risk"
+          data-move-scale="0.3"
+          data-move-origin="0% 0%"
+          data-move-dur="0.42"
+          data-move-ease="power2.inOut"
+        >
+          <g
+            data-move-when="shield"
+            data-move-scale="3.2"
+            data-move-origin="0% 0%"
+            data-move-dur="0.5"
+            data-move-ease="power2.out"
+          >
+            <LightCone x={360} y={214} length={118} spread={30} angle={62} opacity={0.17} />
+          </g>
+        </g>
         {/* poeira suspensa dentro dos fachos */}
         {MOTES.map((m, i) => (
           <circle
@@ -280,10 +371,64 @@ export function LifeScene() {
       </g>
 
       {/* =============================================== a família (depth .8) */}
+      {/* O parallax mora no grupo de FORA e os atores em grupos de dentro: as
+          duas coisas escrevem `transform`, e no mesmo elemento uma anularia a
+          outra. */}
       <g data-scene-fill data-depth="0.8">
-        <Figure {...FAMILY.adultA} reach="right" />
-        <Figure {...FAMILY.child} reach="both" limb={INK.ink} />
-        <Figure {...FAMILY.adultB} reach="left" />
+        {/* ATOR — o adulto da esquerda chega de fora do quadro e, na proteção,
+            dá um passo na direção do centro. */}
+        <g data-move-when="build" data-move-x="-150" data-move-dur="1.3" data-move-ease="power1.out">
+          <g
+            data-move-when="shield"
+            data-move-x="9"
+            data-move-dur="0.45"
+            data-move-ease="power2.inOut"
+          >
+            <Figure {...FAMILY.adultA} reach="right" />
+          </g>
+        </g>
+
+        {/* ATOR — a criança vem de dentro de casa: sobe do vão da porta e
+            cresce até o tamanho do quadro (escala a partir dos pés). */}
+        <g
+          data-move-when="build"
+          data-move-y="34"
+          data-move-scale="0.62"
+          data-move-origin="50% 100%"
+          data-move-dur="1.4"
+          data-move-ease="power1.out"
+        >
+          <Figure {...FAMILY.child} reach="both" limb={INK.ink} />
+        </g>
+
+        {/* ATOR — a figura que se ausenta. Três gestos empilhados: chega no
+            beat de construção, desliza para fora do lugar no imprevisto (o véu
+            do bloco de risco repete EXATAMENTE este movimento e a apaga pelo
+            caminho) e volta a se aproximar na proteção. */}
+        <g data-move-when="build" data-move-x="150" data-move-dur="1.35" data-move-ease="power1.out">
+          <g
+            data-move-when="risk"
+            data-move-x={AUSENCIA.x}
+            data-move-y={AUSENCIA.y}
+            data-move-scale={AUSENCIA.scale}
+            data-move-origin="50% 100%"
+            data-move-dur="0.55"
+            data-move-ease="power2.out"
+          >
+            <g
+              data-move-when="shield"
+              data-move-x={AUSENCIA.voltaX}
+              data-move-y={AUSENCIA.voltaY}
+              data-move-scale={AUSENCIA.voltaScale}
+              data-move-origin="50% 100%"
+              data-move-dur="0.5"
+              data-move-ease="power2.inOut"
+            >
+              <Figure {...FAMILY.adultB} reach="left" />
+            </g>
+          </g>
+        </g>
+
         {/* as mãos que se encontram */}
         <circle cx="262" cy="291" r="3.6" fill="rgb(var(--brand-2) / .95)" />
         <circle cx="307" cy="291" r="3.6" fill="rgb(var(--brand-2) / .95)" />
@@ -320,12 +465,32 @@ export function LifeScene() {
           sobre o degrau e o capacho, não por baixo deles. As sombras da família
           moram aqui pelo mesmo motivo — são projetadas por essa luz. */}
       <g data-scene-fill data-depth="0.9">
-        <path
-          d="M196 330h168l72 44H124Z"
-          fill="rgb(var(--brand-2) / .14)"
-          filter={`url(#${ID}-soft)`}
-        />
-        <ellipse cx="280" cy="366" rx="132" ry="20" fill="rgb(var(--brand-2) / .1)" />
+        {/* ATOR — a mancha de luz no chão. Encolhe para a soleira (origem no
+            topo, no meio da porta) quando a luz cai, e volta a se derramar na
+            proteção. As sombras da família ficam FORA do ator: elas não
+            encolhem, quem encolhe é a luz. */}
+        <g
+          data-move-when="risk"
+          data-move-scale="0.42"
+          data-move-origin="50% 0%"
+          data-move-dur="0.42"
+          data-move-ease="power2.inOut"
+        >
+          <g
+            data-move-when="shield"
+            data-move-scale="2.3"
+            data-move-origin="50% 0%"
+            data-move-dur="0.5"
+            data-move-ease="power2.out"
+          >
+            <path
+              d="M196 330h168l72 44H124Z"
+              fill="rgb(var(--brand-2) / .14)"
+              filter={`url(#${ID}-soft)`}
+            />
+            <ellipse cx="280" cy="366" rx="132" ry="20" fill="rgb(var(--brand-2) / .1)" />
+          </g>
+        </g>
         <CastShadow x={232} spread={26} length={62} />
         <CastShadow x={284} spread={16} length={46} />
         <CastShadow x={334} spread={24} length={58} />
@@ -409,14 +574,28 @@ export function LifeScene() {
           strokeLinejoin="round"
           filter={`url(#${ID}-soft)`}
         />
-        <path
-          d="M30 76h496"
-          fill="none"
-          stroke={INK.near}
-          strokeWidth="2.6"
-          strokeLinecap="round"
-          vectorEffect="non-scaling-stroke"
-        />
+      </g>
+
+      {/* ATOR — a reta DESCE até a linha de base em vez de aparecer pronta.
+             O deslocamento inicial mora no atributo `transform` do grupo de
+             fora (que o GSAP lê como base) e o ator de dentro o cancela: a
+             linha cai de 26px acima e assenta exatamente sobre o traçado. */}
+      <g data-scene-risk data-risk-delay="0.02" transform="translate(0 -26)">
+        <g
+          data-move-when="risk"
+          data-move-y="26"
+          data-move-dur="0.3"
+          data-move-ease="power3.in"
+        >
+          <path
+            d="M30 76h496"
+            fill="none"
+            stroke={INK.near}
+            strokeWidth="2.6"
+            strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </g>
       </g>
 
       {/* 1 — a luz da casa cai: o vão escurece, os fachos apagam e a mancha do
@@ -449,9 +628,40 @@ export function LifeScene() {
         <rect x="384" y="232" width="44" height="44" rx="4" fill={INK.void} opacity=".5" />
       </g>
 
-      {/* 2 — uma das figuras deixa de ter corpo */}
+      {/* 2 — uma das figuras deixa de ter corpo.
+             As DUAS peças da ausência carregam os MESMOS `data-move-*` da
+             figura sólida (ver AUSENCIA), e por isso viajam coladas nela: o
+             apagador a dissolve pelo caminho e o contorno tracejado ocupa o
+             corpo que ela deixou de ter. O que se vê é uma pessoa que desliza
+             para fora do lugar e, no mesmo gesto, deixa de ser corpo — em vez
+             de trocar de aparência num piscar.
+
+             O contorno tem de vir DEPOIS do apagador e no mesmo movimento: solto,
+             o apagador ficaria à mostra como uma silhueta chapada e leria como
+             mais uma pessoa na cena. */}
       <g data-scene-risk data-risk-delay="0.16">
-        <Figure {...FAMILY.adultB} reach="left" variant="ghost" />
+        <g
+          data-move-when="risk"
+          data-move-x={AUSENCIA.x}
+          data-move-y={AUSENCIA.y}
+          data-move-scale={AUSENCIA.scale}
+          data-move-origin="50% 100%"
+          data-move-dur="0.55"
+          data-move-ease="power2.out"
+        >
+          <g
+            data-move-when="shield"
+            data-move-x={AUSENCIA.voltaX}
+            data-move-y={AUSENCIA.voltaY}
+            data-move-scale={AUSENCIA.voltaScale}
+            data-move-origin="50% 100%"
+            data-move-dur="0.5"
+            data-move-ease="power2.inOut"
+          >
+            <Figure {...FAMILY.adultB} reach="left" variant="veil" />
+            <Figure {...FAMILY.adultB} reach="left" variant="trace" />
+          </g>
+        </g>
       </g>
 
       {/* 3 — a parede trinca */}

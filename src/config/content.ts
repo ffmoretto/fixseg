@@ -173,7 +173,30 @@ export interface Insurer {
  *   { name: 'Com logo', logo: '/seguradoras/com-logo.svg', url: 'https://…' },
  * ];
  */
-export const insurers: Insurer[] = [];
+export const insurers: Insurer[] = [
+  { name: 'AVLA', logo: '/seguradoras/avla.png', url: 'https://www.avla.com.br' },
+  { name: 'AXA', logo: '/seguradoras/axa.png', url: 'https://www.axa.com.br' },
+  { name: 'Allianz', logo: '/seguradoras/allianz.png', url: 'https://www.allianz.com.br' },
+  { name: 'Azul Seguros', logo: '/seguradoras/azul-seguros.png', url: 'https://www.azulseguros.com.br' },
+  { name: 'Bradesco Seguros', logo: '/seguradoras/bradesco-seguros.png', url: 'https://www.bradescoseguros.com.br' },
+  { name: 'HDI Seguros', logo: '/seguradoras/hdi-seguros.png', url: 'https://www.hdiseguros.com.br' },
+  { name: 'Mapfre', logo: '/seguradoras/mapfre.png', url: 'https://www.mapfre.com.br' },
+  { name: 'MetLife', logo: '/seguradoras/metlife.png', url: 'https://www.metlife.com.br' },
+  { name: 'Porto', logo: '/seguradoras/porto.png', url: 'https://www.portoseguro.com.br' },
+  { name: 'Pottencial', logo: '/seguradoras/pottencial.png', url: 'https://www.pottencial.com.br' },
+  { name: 'Sancor Seguros', logo: '/seguradoras/sancor-seguros.png', url: 'https://www.sancorseguros.com.br' },
+  { name: 'SulAmérica', logo: '/seguradoras/sulamerica.png', url: 'https://www.sulamerica.com.br' },
+  { name: 'Tokio Marine', logo: '/seguradoras/tokio-marine.png', url: 'https://www.tokiomarine.com.br' },
+  { name: 'Zurich', logo: '/seguradoras/zurich.png', url: 'https://www.zurich.com.br' },
+  /* Faltando o arquivo utilizável:
+     - Fairfax: o arquivo enviado é a versão CLARA (texto branco), feita para
+       fundo escuro — sobre a placa branca do carrossel ela fica invisível.
+       Peça a versão escura sobre fundo claro e descomente a linha abaixo.
+     - Seguros Unimed, Swiss Re e Yelum foram citados no envio mas os arquivos
+       não chegaram.
+  */
+  // { name: 'Fairfax', logo: '/seguradoras/fairfax.png', url: 'https://www.fairfax.com.br' },
+];
 
 /* -------------------------------------------------------------------------- */
 /* DEPOIMENTOS DIRETOS                                                        */

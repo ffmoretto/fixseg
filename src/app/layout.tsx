@@ -20,6 +20,7 @@ import { baseMetadata, organizationSchema, JsonLd } from '@/lib/seo';
 import { THEME_DEFAULT, THEME_BAR_COLOR } from '@/config/theme';
 import Header from '@/components/layout/Header';
 import Footer from '@/components/layout/Footer';
+import VerseBand from '@/components/layout/VerseBand';
 import WhatsAppFloat from '@/components/layout/WhatsAppFloat';
 import PageLoader from '@/components/layout/PageLoader';
 import SmoothScroll from '@/components/layout/SmoothScroll';
@@ -84,6 +85,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <SmoothScroll>
           <main id="conteudo">{children}</main>
+          {/* Faixa de versículos: entre o fim do conteúdo e o rodapé, em todas
+              as páginas. Ver src/config/verses.ts para ligar/desligar, mudar o
+              intervalo ou trocar os textos. */}
+          <VerseBand />
           <Footer />
         </SmoothScroll>
 

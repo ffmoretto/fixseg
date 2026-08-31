@@ -65,6 +65,9 @@ const config: Config = {
         alert: token('alert'),
         'alert-2': token('alert-2'),
 
+        /* placa clara sob os logos das seguradoras (ver globals.css) */
+        'logo-plate': token('logo-plate'),
+
         /* Texto e ícones POR CIMA de superfície da marca (gradiente azul,
            verde do WhatsApp). Branco nos dois temas, de propósito: o fundo ali
            não muda. Usar `text-fg` nesses lugares deixaria texto escuro sobre
