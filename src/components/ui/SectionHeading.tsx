@@ -4,7 +4,6 @@ import { useRef, type ReactNode } from 'react';
 import { gsap, useGSAP, SplitText } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/hooks/useReducedMotion';
 import { cn } from '@/lib/utils';
-import Icon from '@/components/icons';
 
 interface Props {
   eyebrow?: string;
@@ -143,13 +142,14 @@ export function SectionHeading({
           data-anim="up"
           className="eyebrow mb-5 translate-y-3 opacity-0 [--anim-dist:12px]"
         >
-          {/* A faísca chegou a respirar (opacidade em laço) e foi CORTADA: são
-              nove etiquetas na página, cada uma uma animação num `<svg>` em
-              linha, que o Chrome não promove a camada própria — nove recálculos
-              de estilo por quadro, o tempo todo, por um efeito que ninguém vê.
-              Custou ~10ms de quadro na CPU 4× mais lenta. O destaque do título
-              já é o que dá vida a este bloco. */}
-          <Icon name="spark" size={13} className="text-accent-ink" />
+          {/* A ETIQUETA NÃO LEVA ÍCONE.
+              Havia uma faísca (✦) antes do texto em todas as etiquetas da
+              página. Saiu a pedido do cliente: repetida em nove seções, aquela
+              estrelinha tinha virado a assinatura visual de "página gerada por
+              IA" e deixava o site com cara de modelo pronto. O destaque em cor
+              no título é o que dá vida ao bloco.
+              (Havia também um motivo técnico para não animá-la: nove `<svg>`
+              em linha piscando custavam ~10ms de quadro na CPU 4× mais lenta.) */}
           {eyebrow}
         </span>
       )}

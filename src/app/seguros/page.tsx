@@ -52,7 +52,6 @@ export default function SegurosPage() {
 
           <div className="max-w-[44rem]">
             <span className="eyebrow">
-              <Icon name="spark" size={13} />
               Portfólio completo
             </span>
             <h1 className="mt-5 text-display-lg font-semibold text-fg">

@@ -539,7 +539,6 @@ export function StoryScroll() {
       {/* introdução (rola normalmente antes do pin) */}
       <div className="shell relative z-10 pb-14 pt-section text-center md:pb-20">
         <span className="eyebrow justify-center">
-          <Icon name="spark" size={13} />
           {storyIntro.eyebrow}
         </span>
         <h2 id="historia-titulo" className="mx-auto mt-5 max-w-[18ch] text-display-lg text-fg">
@@ -611,7 +610,12 @@ export function StoryScroll() {
                  conteúdo se centraliza na altura inteira da janela e o topo da
                  cena desaparece atrás do menu — foi exatamente o defeito
                  relatado ("a história sobe enquanto você desce a página").
-                 O recuo inferior reserva a faixa dos indicadores. */
+                 O recuo inferior reserva a faixa dos indicadores.
+                 O valor acompanha a altura da barra ROLADA no celular
+                 (h-[84px] em Header.tsx) — é esse o estado do cabeçalho quando
+                 a narrativa está na tela. Mexeu na barra, remeça com
+                 `story-fit.mjs`: em 360×640 a folga do último capítulo é de
+                 poucos pixels, e é lá que o erro aparece primeiro. */
               className="absolute inset-0 flex h-full flex-col justify-center px-0 pb-[64px] pt-[82px] opacity-0 [@media(max-height:700px)]:pb-[52px] [@media(max-height:700px)]:pt-[70px] lg:pb-0 lg:pt-0"
             >
               <div

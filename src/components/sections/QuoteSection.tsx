@@ -2,7 +2,7 @@
 
 import { Suspense } from 'react';
 import { site } from '@/config/site';
-import { whatsappUrl, telUrl } from '@/lib/whatsapp';
+import { whatsappUrl } from '@/lib/whatsapp';
 import { track } from '@/lib/analytics';
 import Icon from '@/components/icons';
 import SectionHeading from '@/components/ui/SectionHeading';
@@ -12,7 +12,6 @@ import QuoteForm from './QuoteForm';
 /** Bloco de cotação na home — a principal área de conversão do site. */
 export function QuoteSection() {
   const wa = whatsappUrl();
-  const tel = telUrl();
 
   return (
     <section id="cotacao" className="relative scroll-mt-24 overflow-hidden py-section">
@@ -60,7 +59,7 @@ export function QuoteSection() {
             ))}
           </ul>
 
-          {(wa || tel) && (
+          {wa && (
             <div className="mt-9 border-t border-hair pt-7">
               <p className="text-[.875rem] font-semibold uppercase tracking-[0.16em] text-fg-4">
                 Prefere falar direto?
@@ -87,20 +86,8 @@ export function QuoteSection() {
                     />
                   </a>
                 )}
-                {tel && site.contact.phone && (
-                  <a
-                    href={tel}
-                    onClick={() => track('phone_click', { placement: 'cotacao' })}
-                    className="group flex min-h-[44px] items-center gap-3 text-[1.0625rem] font-medium text-fg-2 transition-[color,transform] duration-300 ease-brand hover:translate-x-1 hover:text-fg active:translate-x-0 active:scale-[.98] active:duration-[90ms]"
-                  >
-                    <Icon
-                      name="phone"
-                      size={18}
-                      className="text-accent-ink transition-transform duration-300 ease-brand group-hover:-rotate-12 group-hover:scale-110"
-                    />
-                    {site.contact.phone}
-                  </a>
-                )}
+                {/* O número não é exibido: o contato por telefone acontece pelo
+                    WhatsApp, e o número existe só como destino daquele link. */}
               </div>
             </div>
           )}

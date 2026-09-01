@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import Link from 'next/link';
 import { site } from '@/config/site';
 import { cn } from '@/lib/utils';
@@ -10,6 +11,16 @@ interface LogoProps {
   variant?: 'lockup' | 'mark';
   /** Altura TOTAL da peça em px. A largura acompanha, preservando a proporção. */
   height?: number;
+  /**
+   * Altura em telas menores que 768px. Omitida, vale `height` nas duas.
+   *
+   * Existe porque a peça é LARGA: a largura é 2,58 × a altura, então uma logo
+   * de 68px ocupa 175px. Num aparelho de 320px isso não sobra espaço para o
+   * seletor de tema e o botão do menu, e o cabeçalho transborda — foi medido.
+   * A troca é feita em CSS (duas variáveis + `md:`), nunca em JavaScript: ler a
+   * largura da janela no render divergiria entre servidor e navegador.
+   */
+  heightSm?: number;
   className?: string;
   asLink?: boolean;
   /** Marca o elemento para o GSAP encontrar na entrada da página */
@@ -30,6 +41,7 @@ interface LogoProps {
 export function Logo({
   variant = 'lockup',
   height = 40,
+  heightSm,
   className,
   asLink = true,
   animatable = false,
@@ -42,8 +54,16 @@ export function Logo({
       data-logo={animatable ? 'root' : undefined}
     >
       <Mark
-        style={{ height, width: 'auto' }}
-        className="block text-fg transition-colors duration-400 ease-brand"
+        /* A altura vem de variável, não de `style.height`: estilo em linha
+           venceria a classe `md:` e a versão de desktop nunca se aplicaria. */
+        style={
+          {
+            '--logo-h': `${heightSm ?? height}px`,
+            '--logo-h-md': `${height}px`,
+            width: 'auto',
+          } as CSSProperties
+        }
+        className="block h-[var(--logo-h)] text-fg transition-colors duration-400 ease-brand md:h-[var(--logo-h-md)]"
       />
     </span>
   );

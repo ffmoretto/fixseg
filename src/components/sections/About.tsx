@@ -125,7 +125,6 @@ export function About() {
           <div className="relative flex flex-col items-start justify-between gap-7 p-8 md:flex-row md:items-center md:p-11">
             <div>
               <span className="eyebrow">
-                <Icon name="spark" size={13} />
                 Patrimônio protegido
               </span>
               <h3 className="mt-4 max-w-[26ch] font-display text-display-sm font-semibold text-fg">

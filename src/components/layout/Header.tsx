@@ -153,15 +153,34 @@ export function Header() {
         )}
       >
         <div
+          /* `data-header-bar` é o que AnchorScroll mede para descontar a altura
+             da barra na rolagem por âncora. Não remova. */
+          data-header-bar
           className={cn(
             /* Folga de 16px entre logo, menu e ações. Com 24px a soma dos três
                blocos passava dos 1160px úteis da `shell` em 1440px. */
             'shell flex items-center justify-between gap-4 transition-[height] duration-500 ease-brand',
-            scrolled ? 'h-[76px]' : 'h-[98px]',
+            /* A altura da barra acompanha a da logo, e é MENOR no celular
+               porque a logo também é (ver abaixo). Ao mexer aqui, atualize
+               `--header-h` em globals.css — é o valor que a rolagem por âncora
+               desconta para o título da seção não parar atrás do cabeçalho — e
+               remeça a narrativa no celular com `story-fit.mjs`. */
+            scrolled ? 'h-[84px] md:h-[92px]' : 'h-[108px] md:h-[120px]',
           )}
         >
           <div data-header-item className="flex items-center">
-            <Logo height={scrolled ? 40 : 48} animatable />
+            {/* 68px no desktop (56px rolado) e 56px no celular (46px rolado).
+                Duas razões para o tamanho maior: a assinatura "Corretora de
+                Seguros" ocupa 8% da altura da peça, então é ELA que define o
+                tamanho mínimo legível — não o nome (ver ASSINATURA_ESCALA em
+                LogoLockup). E a peça é larga: 2,58 × a altura, ou 175px a
+                68px de altura, o que não caberia ao lado do menu num aparelho
+                de 320px. */}
+            <Logo
+              height={scrolled ? 56 : 68}
+              heightSm={scrolled ? 46 : 56}
+              animatable
+            />
           </div>
 
           {/* Navegação desktop — a partir de 1280px (xl), não de 1024px (lg).

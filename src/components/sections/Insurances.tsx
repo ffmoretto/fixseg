@@ -182,6 +182,9 @@ function InsuranceCard({ ins, index }: { ins: Insurance; index: number }) {
 export function Insurances() {
   const [filter, setFilter] = useState<Filter>('todos');
   const gridRef = useRef<HTMLDivElement>(null);
+  /* A troca de filtro só anima a partir da SEGUNDA execução. Na montagem quem
+     revela os cartões é a cascata atrelada ao scroll, logo abaixo. */
+  const jaFiltrou = useRef(false);
   /* Leitura síncrona: já correta no primeiro render do cliente, então a
      animação é construída uma única vez em vez de montada e remontada. */
   const reduced = prefersReducedMotion();
@@ -219,14 +222,37 @@ export function Insurances() {
     { dependencies: [reduced], scope: gridRef },
   );
 
-  /* reordenação animada ao trocar o filtro */
+  /* -------------------------------------------- reordenação ao trocar o filtro
+     Aqui morava um bug que sumia com metade da grade: ao voltar para "Para sua
+     empresa", os cinco cartões exclusivos de empresa apareciam com
+     `opacity: 0`.
+
+     A cadeia era esta: os cartões nascem invisíveis por CSS
+     (`html.js-anim [data-anim]:not(.is-in) { opacity: 0 }`) e só ficam visíveis
+     quando ganham a classe `is-in`. Quem adiciona essa classe é a cascata de
+     entrada, que roda UMA única vez (`once: true`). Trocar de filtro
+     DESMONTA os cartões que saem; ao voltar, eles são montados de novo, agora
+     sem `is-in` — e o `clearProps: 'opacity'` desta animação devolvia o
+     controle da opacidade justamente para a regra de CSS que os mantinha
+     invisíveis. Resultado: animavam de 0 a 1 e voltavam para 0 no fim.
+
+     A correção é marcar `is-in` nos cartões desta leva, exatamente como a
+     cascata faz. Daí o `clearProps` volta a ser seguro. */
   useGSAP(
     () => {
       if (reduced) return;
       const el = gridRef.current;
       if (!el) return;
+      /* montagem: quem revela é a cascata do scroll, não esta animação */
+      if (!jaFiltrou.current) {
+        jaFiltrou.current = true;
+        return;
+      }
+      const itens = Array.from(el.querySelectorAll<HTMLElement>('[data-reveal-item]'));
+      if (!itens.length) return;
+
       gsap.fromTo(
-        el.querySelectorAll('[data-reveal-item]'),
+        itens,
         { opacity: 0, y: 18, scale: 0.98 },
         {
           opacity: 1,
@@ -236,6 +262,7 @@ export function Insurances() {
           stagger: 0.035,
           ease: 'brand',
           clearProps: 'transform,opacity',
+          onStart: () => itens.forEach((n) => n.classList.add('is-in')),
         },
       );
     },
@@ -317,7 +344,6 @@ export function Insurances() {
             />
             <div className="relative">
               <span className="eyebrow">
-                <Icon name="spark" size={13} />
                 Sob medida
               </span>
               <h3 className="mt-5 font-display text-display-sm text-fg">

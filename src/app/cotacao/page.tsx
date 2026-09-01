@@ -56,7 +56,6 @@ export default function CotacaoPage() {
 
           <div className="max-w-[46rem]">
             <span className="eyebrow">
-              <Icon name="spark" size={13} />
               Cotação sem compromisso
             </span>
             <h1 className="mt-5 text-display-lg font-semibold text-fg">

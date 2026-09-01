@@ -46,7 +46,9 @@ export function Insurers() {
             style={reduced ? undefined : { animation: 'marquee-x 38s linear infinite' }}
           >
             {track.map((ins, i) => {
-              const Card = (
+  if (!ins.logo) return null;
+
+  const Card = (
                 <div className="grid h-[92px] w-[176px] place-items-center rounded-2xl border border-hair bg-tint/[.03] px-6 transition-all duration-500 ease-brand hover:border-brand-2/35 hover:bg-tint/[.06]">
                   <Image
                     src={ins.logo}

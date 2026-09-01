@@ -160,6 +160,26 @@ export function formattedAddress(): string | null {
 }
 
 /**
+ * Endereço em LINHAS, para blocos estreitos.
+ *
+ * `formattedAddress()` devolve tudo numa string separada por "·", o que serve
+ * para uma linha larga. Numa coluna estreita — a de contato do rodapé — aquela
+ * string quebra em lugares ruins: "741 —" numa linha e "Sala 02" na outra.
+ * Aqui cada parte vira uma linha própria, curta o bastante para não quebrar.
+ */
+export function addressLines(): string[] {
+  const a = site.address;
+  const linhas = [
+    a.street,
+    [a.district, a.city && a.state ? `${a.city}/${a.state}` : a.city || a.state]
+      .filter(Boolean)
+      .join(' · '),
+    a.zip ? `CEP ${a.zip}` : null,
+  ].filter((l): l is string => !!l && l.length > 0);
+  return linhas;
+}
+
+/**
  * Link do mapa.
  *
  * Se `address.mapsUrl` estiver preenchido, usa ele. Caso contrário monta uma

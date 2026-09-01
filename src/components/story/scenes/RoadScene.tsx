@@ -13,7 +13,6 @@ import {
   Sparks,
   Wheel,
   accent,
-  accentStroke,
   alert,
   detail,
   glass,
@@ -29,17 +28,55 @@ import {
 const ID = 'sc-road';
 
 /* ========================================================================== */
-/* GEOMETRIA COMPARTILHADA                                                    */
+/* GEOMETRIA DO CRUZAMENTO                                                    */
 /* ========================================================================== */
+/**
+ * A cena é um cruzamento visto quase de perfil:
+ *
+ *   · a VIA PRINCIPAL corre da esquerda para a direita, do rodapé até `VIA_Y`
+ *     (a aresta distante do asfalto). É nela que os dois veículos rodam, em
+ *     sentidos opostos, na faixa de trás;
+ *   · a VIA TRANSVERSAL desce do ponto de fuga, cruza a principal entre
+ *     `CRUZ_E` e `CRUZ_D` e segue em direção ao observador — é o que torna o
+ *     lugar um cruzamento e não um trecho de reta;
+ *   · as duas FAIXAS DE RETENÇÃO, uma de cada lado do cruzamento, e a quebra da
+ *     linha divisória em cima da caixa do cruzamento completam a leitura.
+ *
+ * Todo o encontro dos dois veículos foi MEDIDO nestas constantes: o ponto de
+ * contato é `IMPACTO_X`, e é para lá que o carro avança `AVANCO_CARRO` e o
+ * caminhão avança `AVANCO_CAMINHAO` no instante do choque.
+ */
+const VP_X = 250; // ponto de fuga da via transversal
+const VIA_Y = 342; // aresta distante da via principal
+const GY = 356; // linha de contato dos pneus dos dois veículos
+const CRUZ_E = 186; // aresta esquerda da caixa do cruzamento
+const CRUZ_D = 336; // aresta direita da caixa do cruzamento
+
+/* --- o carro: entra pela ESQUERDA, aponta para a direita ------------------ */
+const CAR_X = 160; // centro do carro em repouso
+const CAR_S = 0.92; // escala: o carro é o veículo leve da cena
+const CAR_NOSE = 257.5; // 160 + 106 × 0.92 — para-choque dianteiro em repouso
+const CAR_RODA_TRAS = 106.6; // 160 − 58 × 0.92 — pneu que trava e vira pivô
+const AVANCO_CARRO = 30; // o quanto ele ainda anda até bater
+
+/* --- o caminhão: entra pela DIREITA, aponta para a esquerda --------------- */
+const TRK_X = 401; // centro do cavalo em repouso
+const TRK_S = 1.06; // escala: 18 unidades mais alto que o carro
+const TRK_NOSE = 307.7; // 401 − 88 × 1.06 — para-choque dianteiro em repouso
+const TRK_RODA_TRAS = 466.7; // 401 + 62 × 1.06 — pneu traseiro, pivô do repique
+const AVANCO_CAMINHAO = -25; // ele avança menos: massa maior, freio mais longo
 
 /**
- * Ponto de fuga da pista. Tudo que recua na cena converge para cá: as bordas do
- * asfalto, as faixas centrais e a fila da frota. Fica um pouco à esquerda do
- * centro para abrir espaço ao caminhão no plano intermediário.
+ * O PONTO DE CONTATO, conferido na conta:
+ *   nariz do carro     257.5 + 30 = 287.5
+ *   nariz do caminhão  307.7 − 25 = 282.7
+ * ou seja, no quadro do impacto os dois se sobrepõem em ~4,8 unidades — eles se
+ * ENCOSTAM de fato, não sobra vão entre as duas latarias.
  */
-const VP_X = 250;
+const IMPACTO_X = 285;
+const IMPACTO_Y = 324;
 
-/** Silhueta do automóvel de primeiro plano. Frente voltada para a ESQUERDA. */
+/** Silhueta do automóvel. Desenhada com a frente à ESQUERDA; `dir` espelha. */
 const CAR_BODY =
   'M-105 -40C-105 -50 -99 -55 -88 -56L-58 -57L-32 -80L36 -82L60 -58L94 -56C102 -55 105 -50 105 -41V-18C105 -13 102 -10 97 -10H-97C-102 -10 -105 -13 -105 -18Z';
 const CAR_WINDSHIELD = 'M-30 -78H-10V-56H-54Z';
@@ -50,11 +87,39 @@ const CAR_BACKLIGHT = 'M32 -78H36L54 -56H32Z';
 const TRUCK_BOX = 'M-30 -90H78C83 -90 86 -87 86 -82V-22H-30Z';
 const TRUCK_CAB = 'M-86 -22V-52C-86 -60 -82 -66 -74 -70L-62 -76H-30V-22Z';
 
-/** Silhueta do furgão da frota: cabine baixa na frente, baú alto atrás. */
-const VAN_BODY = 'M-30 -10V-19H-18L-12 -30H20C24 -30 26 -28 26 -24V-10Z';
-
 /** Estilhaço de energia: mesma receita para os três fragmentos do impacto. */
 const shard = (d: string) => ({ d, ...heat(ID), opacity: 0.9 });
+
+/* ========================================================================== */
+/* CAIXA E ORIGEM DE UM ATOR                                                  */
+/* ========================================================================== */
+/**
+ * O orquestrador recebe a origem da transformação em PORCENTAGEM da caixa do
+ * ator, e a caixa de um grupo é a união das caixas dos filhos — ela muda quando
+ * o conteúdo cresce, gira ou ganha um cone de luz. `Ancora` é um retângulo
+ * transparente que ENVOLVE tudo o que o ator carrega: ele passa a ser a caixa, e
+ * `origem()` converte um ponto do desenho em porcentagem exata.
+ *
+ * É isso que permite girar o carro em volta do pneu traseiro sem chute: o pivô
+ * é uma coordenada da cena, não uma fração adivinhada.
+ */
+type Caixa = [x: number, y: number, w: number, h: number];
+
+const origem = ([bx, by, bw, bh]: Caixa, px: number, py: number) =>
+  `${xy(((px - bx) / bw) * 100)}% ${xy(((py - by) / bh) * 100)}%`;
+
+const Ancora = ({ box: [x, y, w, h] }: { box: Caixa }) => (
+  <rect x={x} y={y} width={w} height={h} fill="transparent" />
+);
+
+/** Caixa do ator do carro: carro + sombra de contato + facho do farol. */
+const CAIXA_CARRO: Caixa = [40, 268, 360, 124];
+/** Caixa do ator do caminhão: conjunto + sombra + facho. */
+const CAIXA_CAMINHAO: Caixa = [200, 246, 310, 130];
+/** Caixas das peças que crescem: teia no vidro e as duas marcas de frenagem. */
+const CAIXA_TEIA: Caixa = [176, 282, 36, 28];
+const CAIXA_FREIO_CARRO: Caixa = [40, 348, 180, 24];
+const CAIXA_FREIO_CAMINHAO: Caixa = [412, 346, 126, 24];
 
 /* ========================================================================== */
 /* ATOR QUE CRESCE                                                            */
@@ -70,16 +135,16 @@ const shard = (d: string) => ({ d, ...heat(ID), opacity: 0.9 });
  * continua coerente (a peça aparece menor, mas no lugar certo), e o ator de
  * fora fica sem transformação de base, então não briga com o GSAP.
  *
- * `px`/`py` é o ponto que fica PARADO — o ponto de impacto, o pneu que trava.
- * Ele precisa ser exatamente o ponto para onde `origin` aponta na caixa do
- * ator: encolher em torno desse ponto o mantém no mesmo lugar da caixa, então
- * os dois continuam coincidindo depois do encolhimento.
+ * `px`/`py` é o ponto que fica PARADO — o ponto de impacto, o pneu que trava —
+ * e `box` é a `Ancora` que fixa a caixa do ator. Como o encolhimento é uniforme
+ * e acontece em volta de `px`/`py`, a porcentagem daquele ponto dentro da caixa
+ * não muda: a mesma `origem()` serve para a peça encolhida e para a inteira.
  */
 function Cresce({
   fator,
   px,
   py,
-  origin,
+  box,
   dur = 0.5,
   ease = 'power2.out',
   children,
@@ -87,7 +152,7 @@ function Cresce({
   fator: number;
   px: number;
   py: number;
-  origin: string;
+  box: Caixa;
   dur?: number;
   ease?: string;
   children: ReactNode;
@@ -96,10 +161,11 @@ function Cresce({
     <g
       data-move-when="risk"
       data-move-scale={fator}
-      data-move-origin={origin}
+      data-move-origin={origem(box, px, py)}
       data-move-dur={dur}
       data-move-ease={ease}
     >
+      <Ancora box={box} />
       {/* `xy()` porque o fator vem de uma divisão: servidor e navegador têm de
           escrever exatamente a mesma string. */}
       <g transform={`translate(${px} ${py}) scale(${xy(1 / fator)}) translate(${-px} ${-py})`}>
@@ -157,7 +223,7 @@ function Running({
 }
 
 /* ========================================================================== */
-/* AUTOMÓVEL — primeiro plano                                                 */
+/* AUTOMÓVEL                                                                  */
 /* ========================================================================== */
 /**
  * Perfil de carro construído em massa: o corpo leva uma base chapada mais o
@@ -169,12 +235,26 @@ function Running({
  * uso legítimo do `--alert` fora do fogo, porque luz de freio é sinal de
  * perigo. Vermelho não existe na paleta — e não faz falta.
  *
+ * `dir = -1` ESPELHA o veículo: nesta cena o carro sobe pela via apontando para
+ * a direita, de encontro ao caminhão. O espelhamento também inverte o giro das
+ * rodas, o que é exatamente o certo — os dois veículos vêm em sentidos opostos.
+ *
  * A origem local é o PONTO DE CONTATO dos pneus com o chão, no centro do carro:
  * `translate(x, y)` assenta o veículo exatamente onde ele pisa no asfalto.
  */
-function Car({ x, y }: { x: number; y: number }) {
+function Car({
+  x,
+  y,
+  s = 1,
+  dir = 1,
+}: {
+  x: number;
+  y: number;
+  s?: number;
+  dir?: 1 | -1;
+}) {
   return (
-    <g transform={`translate(${x} ${y})`}>
+    <g transform={`translate(${x} ${y}) scale(${xy(dir * s)} ${xy(s)})`}>
       {/* corpo: base + volume */}
       <path {...mass('mid')} d={CAR_BODY} />
       <path {...volume(ID)} d={CAR_BODY} />
@@ -185,8 +265,7 @@ function Car({ x, y }: { x: number; y: number }) {
       <path {...mass('deep')} d="M-106 -30H-86V-10H-97C-102 -10 -106 -14 -106 -20Z" />
       <path {...mass('deep')} d="M86 -30H106V-20C106 -14 102 -10 97 -10H86Z" />
       {/* cavas de roda: o vão escuro onde a roda entra */}
-      <path {...mass('deep')} d="M-94 -10A30 30 0 01-34 -10Z" />
-      <path {...mass('deep')} d="M28 -10A30 30 0 0188 -10Z" />
+      <path {...mass('deep')} d="M-94 -10A30 30 0 01-34 -10ZM28 -10A30 30 0 0188 -10Z" />
 
       {/* vidraça */}
       <path {...glass(ID)} d={CAR_WINDSHIELD} />
@@ -201,21 +280,13 @@ function Car({ x, y }: { x: number; y: number }) {
       <ellipse
         cx="-96"
         cy="-45"
-        rx="22"
-        ry="15"
-        fill="rgb(var(--brand-2) / .3)"
+        rx="20"
+        ry="13"
+        fill="rgb(var(--brand-2) / .2)"
         filter={`url(#${ID}-haze)`}
       />
       <path {...accent(0.95)} d="M-104 -50L-86 -47V-39L-104 -42Z" />
       {/* lanterna traseira em âmbar: luz de freio, o uso legítimo do alerta */}
-      <ellipse
-        cx="102"
-        cy="-45"
-        rx="15"
-        ry="12"
-        fill="rgb(var(--alert) / .34)"
-        filter={`url(#${ID}-haze)`}
-      />
       <path {...alert(0.92)} d="M99 -50H106V-40H99Z" />
 
       {/* rodas com giro próprio */}
@@ -227,7 +298,6 @@ function Car({ x, y }: { x: number; y: number }) {
         <path {...outline(1.7, 0.4)} d={CAR_BODY} />
         <path {...outline(1.3, 0.3)} d={CAR_WINDSHIELD} />
         <path {...outline(1.3, 0.3)} d={CAR_DOORGLASS} />
-        <path {...outline(1.3, 0.3)} d={CAR_BACKLIGHT} />
         <path {...detail(0.26)} d="M-4 -56V-16M28 -56V-18M-58 -57L-32 -80" />
         <path {...detail(0.32, 1.4)} d="M2 -44H16" />
       </g>
@@ -236,12 +306,13 @@ function Car({ x, y }: { x: number; y: number }) {
 }
 
 /* ========================================================================== */
-/* CAMINHÃO — plano intermediário                                             */
+/* CAMINHÃO                                                                   */
 /* ========================================================================== */
 /**
  * Cavalo com baú. A face lateral do baú é a mais densa da cena — é o volume que
  * tapa a luz; a cabine recebe o gradiente de volume e o chassi é um recorte de
- * tinta que amarra as duas peças ao chão. Também aponta para a esquerda.
+ * tinta que amarra as duas peças ao chão. Aponta para a ESQUERDA, contra o
+ * carro.
  */
 function Truck({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
   return (
@@ -252,7 +323,6 @@ function Truck({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
       <path {...mass('near')} d="M-32 -94H86V-88H-32Z" />
       {/* cabine */}
       <path {...volume(ID)} d={TRUCK_CAB} />
-      <path {...mass('near')} d="M-64 -80H-30V-74H-60Z" />
       <path {...glass(ID)} d="M-62 -72H-36V-54H-79Z" />
       {/* chassi, para-choque e cavas */}
       <path {...mass('deep')} d="M-86 -22H86V-14H-86Z" />
@@ -264,14 +334,6 @@ function Truck({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
       {/* farol ciano na frente, lanterna âmbar atrás */}
       <path {...accent(0.9)} d="M-88 -46H-80V-38H-88Z" />
       <path {...alert(0.9)} d="M82 -46H86V-36H82Z" />
-      <ellipse
-        cx="86"
-        cy="-41"
-        rx="12"
-        ry="10"
-        fill="rgb(var(--alert) / .3)"
-        filter={`url(#${ID}-haze)`}
-      />
 
       <Wheel id={ID} x={-64} y={-18} r={18} />
       <Wheel id={ID} x={36} y={-18} r={18} />
@@ -287,24 +349,7 @@ function Truck({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
 }
 
 /* ========================================================================== */
-/* FROTA — plano distante                                                     */
-/* ========================================================================== */
-/** Furgão pequeno: só massa `far` e rodas sem giro — é silhueta, não detalhe. */
-function Van({ x, y, scale }: { x: number; y: number; scale: number }) {
-  return (
-    <g transform={`translate(${x} ${y}) scale(${scale})`}>
-      <path {...mass('far')} d={VAN_BODY} />
-      <path {...mass('mid')} d="M20 -30H26V-10H20Z" />
-      <path d="M-27 -18H-19V-13H-27Z" fill="rgb(var(--brand-2) / .3)" />
-      <path d="M22 -20H26V-14H22Z" fill="rgb(var(--alert) / .5)" />
-      <circle {...mass('mid')} cx="-20" cy="-8" r="5.5" />
-      <circle {...mass('mid')} cx="14" cy="-8" r="5.5" />
-    </g>
-  );
-}
-
-/* ========================================================================== */
-/* ILUMINAÇÃO DA VIA                                                          */
+/* ILUMINAÇÃO E SINALIZAÇÃO DA VIA                                            */
 /* ========================================================================== */
 /**
  * Poste de iluminação: mastro em massa, braço curvo, luminária em ciano e um
@@ -372,6 +417,43 @@ function LightPole({
   );
 }
 
+/**
+ * Semáforo do cruzamento. Não é enfeite: é ele que diz, sem uma palavra, que
+ * aquele ponto da via é um cruzamento com preferência — e o âmbar aceso é
+ * exatamente "dois segundos de distração".
+ *
+ * O mastro nasce na aresta distante do asfalto e o braço avança para dentro do
+ * cruzamento; a cabeça fica ACIMA do teto do carro, senão a peça desaparecia
+ * atrás da lataria do primeiro plano.
+ */
+function TrafficLight({ x, y }: { x: number; y: number }) {
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <path {...mass('near')} d="M-3 0H3L1.8 -148H-1.8Z" />
+      <path {...mass('deep')} d="M-7 0H7V-6H-7Z" />
+      <path
+        d="M0 -148H34"
+        fill="none"
+        stroke={`${INK.near}`}
+        strokeWidth="4"
+        strokeLinecap="round"
+      />
+      <rect {...mass('deep')} x="27" y="-146" width="15" height="34" rx="4" />
+      <circle {...mass('void')} cx="34.5" cy="-138" r="3.4" />
+      <ellipse
+        cx="34.5"
+        cy="-129"
+        rx="12"
+        ry="10"
+        fill="rgb(var(--alert) / .32)"
+        filter={`url(#${ID}-haze)`}
+      />
+      <circle {...alert(0.95)} cx="34.5" cy="-129" r="3.6" />
+      <circle {...mass('void')} cx="34.5" cy="-120" r="3.4" />
+    </g>
+  );
+}
+
 /* ========================================================================== */
 /* CENA                                                                       */
 /* ========================================================================== */
@@ -380,34 +462,42 @@ function LightPole({
  *
  * Camadas, do fundo para a frente:
  *   0,10  a serra em três cristas e o clarão do céu atrás dela;
- *   0,25  a frota que recua até virar silhueta e o poste distante;
- *   0,40  o caminhão no plano intermediário, farol aceso e lanterna âmbar;
- *   0,55  o asfalto: faixas correndo em perspectiva e o brilho do piso molhado;
- *   0,90  o carro em primeiro plano, farol varrendo a pista, reflexos e as
- *         linhas de velocidade rasgando o rodapé do quadro.
- *
- * Movimento próprio: as faixas da pista e as linhas do asfalto correm com
- * `dash-move` — devagar no fundo, rápido na frente, que é o que cria a
- * sensação de velocidade —, as rodas giram e as faíscas do impacto tremulam.
+ *   0,45  o asfalto: a via principal, a transversal que a cruza, as faixas de
+ *         retenção dos dois lados e a divisória que se quebra no cruzamento;
+ *   0,55  o semáforo e o poste distante;
+ *   0,70  o poste da frente;
+ *   0,90  os DOIS VEÍCULOS, no mesmo plano e na mesma linha de chão — é isso
+ *         que permite que eles se encostem de verdade;
+ *   1,00  o asfalto correndo rente ao rodapé do quadro.
  *
  * -----------------------------------------------------------------------------
- * O CASO ACONTECE NA TELA (atores, ver `data-move-*` em StoryScroll.tsx)
+ * A COLISÃO, BEAT POR BEAT (atores, ver `data-move-*` em StoryScroll.tsx)
  * -----------------------------------------------------------------------------
- * É o capítulo em que o movimento faz mais diferença, e é o único em que os
- * atores se empilham em três níveis:
+ *   construção  o carro entra rodando pela ESQUERDA e o caminhão pela DIREITA,
+ *               em rotas convergentes, e param a 50 unidades um do outro — os
+ *               dois faróis acesos, apontados um para o outro, os fachos se
+ *               cruzando no meio do cruzamento. O espectador vê que eles vão
+ *               se encontrar;
  *
- *   construção  o carro ENTRA RODANDO pela esquerda e assenta em primeiro
- *               plano; o caminhão entra pelo lado oposto; as faixas da pista
- *               já correm desde o primeiro quadro (`Running`, em CSS);
- *   imprevisto  o carro é JOGADO para trás e para cima, com um giro curto que
- *               levanta a dianteira (easing seco, gesto de dois décimos); as
- *               faíscas saltam e se abrem no ponto de contato, que fica PARADO
- *               onde a batida aconteceu; a teia cresce no para-brisa a partir
- *               do ponto do impacto; a frenagem se estende no asfalto a partir
- *               do pneu; a poeira sobe e se espalha; o caminhão TOMBA, pivotando
- *               sobre a roda da frente — o nariz afunda e a carreta levanta;
- *   proteção    o conjunto se recompõe: o carro volta quase ao lugar e a
- *               carreta se endireita.
+ *   imprevisto  DOIS ATORES ENCAIXADOS, e é aqui que o capítulo se resolve:
+ *                 · o de fora AVANÇA (0,10 de timeline, `power2.in`): o carro
+ *                   anda +30 e o caminhão −25, e nesse instante as duas latarias
+ *                   se sobrepõem em ~5 unidades. É o quadro do choque;
+ *                 · o de dentro RECUA (0,25, `power4.in`): como `power4.in`
+ *                   praticamente não sai do lugar na primeira metade do gesto
+ *                   (2,5% em t = 0,4), o recuo só começa DEPOIS que o avanço
+ *                   fechou — os dois se encostam antes de serem jogados para
+ *                   trás. O carro, mais leve, recua 22 e gira 9°, levantando a
+ *                   dianteira; o caminhão recua 10 e gira 1,6°.
+ *               No ponto de contato: clarão, estilhaços de energia e faíscas.
+ *               No carro, viajando com ele: capô amassado, para-brisa em teia,
+ *               farol estourado. No caminhão: nariz amassado e farol quebrado.
+ *               No asfalto, atrás de cada um: a marca de frenagem, que SE
+ *               ESTENDE a partir do pneu que travou. E a poeira subindo do
+ *               ponto de contato. Tudo fecha em 0,25 de timeline.
+ *
+ *   proteção    os dois se recompõem em parte — o carro volta a assentar as
+ *               quatro rodas e o caminhão se endireita — e o escudo entra.
  */
 export function RoadScene() {
   return (
@@ -439,303 +529,317 @@ export function RoadScene() {
           {...mass('far')}
           d="M0 330V310L40 282L88 302L146 258L198 296L252 268L306 300L360 250L414 288L470 262L520 288L560 274V330Z"
         />
-        {/* mata rasteira no pé da serra */}
-        <path
-          {...mass('mid')}
-          d="M0 330v-8l22-6 18 8 26-10 20 9 30-7 24 8 34-6 26 9 30-8 28 7 32-9 26 8 30-6 26 9 28-7 26 8 30-9 24 8 30-6v10Z"
-          opacity=".55"
-        />
       </g>
 
       <Ground id={ID} perspective={false} />
 
-      {/* ================================== o asfalto e as faixas (depth .55) */}
-      <g data-depth="0.55">
+      {/* ================================== o cruzamento (depth .45) ======= */}
+      <g data-depth="0.45">
         <g data-scene-fill>
-          {/* asfalto: um trapézio que se abre do ponto de fuga até fora do quadro */}
-          <path {...mass('mid')} d={`M${VP_X - 16} 330H${VP_X + 16}L700 400H-180Z`} opacity=".75" />
-          {/* acostamento de terra dos dois lados */}
-          <path {...mass('far')} d={`M${VP_X - 16} 330L-180 400H-220V330Z`} opacity=".5" />
+          {/* via principal: corre de ponta a ponta do quadro */}
+          <path {...mass('mid')} d={`M-40 ${VIA_Y}H600V400H-40Z`} opacity=".8" />
+          {/* via transversal: desce do ponto de fuga, entra no cruzamento e
+              segue para o observador. É ela que faz do lugar um cruzamento. */}
+          <path
+            {...mass('mid')}
+            d={`M${VP_X - 14} 330H${VP_X + 14}L${CRUZ_D} ${VIA_Y}H${CRUZ_E}Z`}
+            opacity=".55"
+          />
+          <path
+            {...mass('mid')}
+            d={`M${CRUZ_E} ${VIA_Y}H${CRUZ_D}L${CRUZ_D + 12} 400H${CRUZ_E - 10}Z`}
+            opacity=".4"
+          />
+          {/* faixas de retenção: uma de cada lado da caixa do cruzamento */}
+          <path
+            d={`M${CRUZ_E - 6} ${VIA_Y}H${CRUZ_E}L${CRUZ_E - 10} 400H${CRUZ_E - 17}Z`}
+            fill="rgb(var(--brand-2) / .3)"
+          />
+          <path
+            d={`M${CRUZ_D} ${VIA_Y}H${CRUZ_D + 6}L${CRUZ_D + 19} 400H${CRUZ_D + 12}Z`}
+            fill="rgb(var(--brand-2) / .3)"
+          />
           {/* ar quente rasteiro junto ao horizonte */}
           <path
-            d={`M${VP_X - 16} 330H${VP_X + 16}L330 352H150Z`}
+            d={`M${VP_X - 14} 330H${VP_X + 14}L330 352H170Z`}
             fill="rgb(var(--brand) / .12)"
             filter={`url(#${ID}-soft)`}
           />
           {/* piso molhado: o brilho largo que a via devolve */}
           <ellipse
-            cx="250"
-            cy="378"
-            rx="260"
-            ry="30"
+            cx="270"
+            cy="382"
+            rx="270"
+            ry="28"
             fill="rgb(var(--brand-2) / .07)"
             filter={`url(#${ID}-haze)`}
           />
         </g>
 
-        {/* as faixas centrais correndo: três trechos, cada um no seu ritmo.
-            É a camada que mais faz a estrada parecer estrada em movimento. */}
+        {/* a divisória da via principal CORRE e QUEBRA em cima do cruzamento —
+            é o sinal de trânsito mais econômico que existe para "aqui cruza". */}
         <g data-scene-fill>
-        <Running
-          d="M250.3 332L253.1 352"
-          width={2}
-          dash="3 7"
-          dur={2.6}
-          color="rgb(var(--brand-2) / .34)"
-        />
-        <Running
-          d="M253.1 352L256 372"
-          width={5}
-          dash="8 12"
-          dur={1.3}
-          color="rgb(var(--brand-2) / .4)"
-        />
-        <Running
-          d="M256 372L260 400"
-          width={9}
-          dash="14 26"
-          dur={0.65}
-          color="rgb(var(--brand-2) / .46)"
-        />
-        {/* bordas da pista, também correndo */}
-        <Running
-          d="M234 331L-180 400"
-          width={2.2}
-          dash="10 10"
-          dur={0.9}
-          color={INK.near}
-          opacity={0.5}
-        />
-        <Running
-          d="M266 331L700 400"
-          width={2.2}
-          dash="10 10"
-          dur={0.9}
-          color={INK.near}
-          opacity={0.5}
-        />
+          <Running
+            d={`M-40 372H${CRUZ_E - 14}`}
+            width={5}
+            dash="16 24"
+            dur={0.7}
+            color="rgb(var(--brand-2) / .34)"
+          />
+          <Running
+            d={`M${CRUZ_D + 16} 372H600`}
+            width={5}
+            dash="16 24"
+            dur={0.7}
+            color="rgb(var(--brand-2) / .34)"
+          />
+          {/* bordas da via transversal, correndo em direção ao ponto de fuga */}
+          <Running
+            d={`M${CRUZ_E} ${VIA_Y}L${VP_X - 14} 330`}
+            width={1.8}
+            dash="5 5"
+            dur={1.5}
+            color={INK.near}
+            opacity={0.45}
+          />
+          <Running
+            d={`M${CRUZ_D} ${VIA_Y}L${VP_X + 14} 330`}
+            width={1.8}
+            dash="5 5"
+            dur={1.5}
+            color={INK.near}
+            opacity={0.45}
+          />
         </g>
       </g>
 
-      {/* ============================= a frota que recua (depth .25) == */}
-      <g data-scene-fill data-depth="0.25">
-        <Van x={330} y={330.6} scale={0.42} />
-        <Van x={352} y={330.2} scale={0.3} />
-        <Van x={368} y={330} scale={0.22} />
-      </g>
-      <g data-scene-fill data-depth="0.25">
+      {/* ============================ semáforo e poste do fundo (depth .55) */}
+      <g data-scene-fill data-depth="0.55">
+        <TrafficLight x={178} y={VIA_Y + 2} />
         <LightPole x={26} y={372} height={158} dir={1} arm={44} cone={false} />
-      </g>
-
-      {/* ================================ o caminhão (depth .4) == */}
-      {/* O `data-depth` fica no grupo de FORA e os atores em grupos de dentro:
-          parallax e ator escrevem os dois em `transform` e, no mesmo elemento,
-          um anularia o outro. */}
-      <g data-depth="0.4">
-        {/* ATOR — o caminhão entra pelo lado OPOSTO ao do carro */}
-        <g
-          data-move-when="build"
-          data-move-x="420"
-          data-move-dur="1.1"
-          data-move-ease="power1.out"
-        >
-          <Contact id={ID} x={452} y={336} rx={92} ry={9} opacity={0.8} />
-          <g data-scene-fill>
-            {/* ATOR — O TOMBAMENTO NA SERRA. A carreta pivota sobre a roda da
-                frente (origem no canto inferior esquerdo da caixa): o nariz
-                AFUNDA no asfalto e a traseira levanta, e o baú racha no meio do
-                gesto. O `y` positivo é o que impede o efeito de caminhão
-                voando — sem ele, o pivô fica na linha do chão e o veículo
-                inteiro parece decolar. Na proteção ela se endireita quase por
-                completo. */}
-            <g
-              data-move-when="risk"
-              data-move-rot="-6.5"
-              data-move-x="-9"
-              data-move-y="5"
-              data-move-origin="0% 100%"
-              data-move-dur="0.3"
-              data-move-ease="power2.in"
-            >
-              <g
-                data-move-when="shield"
-                data-move-rot="5"
-                data-move-x="6"
-                data-move-y="-4"
-                data-move-origin="0% 100%"
-                data-move-dur="0.46"
-                data-move-ease="power2.inOut"
-              >
-                <Truck x={450} y={336} scale={0.84} />
-                {/* a fenda que abre no baú viaja junto com a carroceria */}
-                <Fracture d="M436 270L449 284L438 296L453 306" delay={0.3} />
-              </g>
-            </g>
-            {/* farol do caminhão varrendo a pista à frente */}
-            <LightCone x={376} y={297} length={96} spread={22} angle={172} opacity={0.13} />
-            {/* o piso devolve a lanterna âmbar do caminhão */}
-            <ellipse
-              cx="522"
-              cy="342"
-              rx="14"
-              ry="9"
-              fill="rgb(var(--alert) / .2)"
-              filter={`url(#${ID}-soft)`}
-            />
-          </g>
-        </g>
       </g>
 
       {/* ================================= o poste da frente (depth .7) == */}
       <g data-scene-fill data-depth="0.7">
-        <LightPole x={536} y={390} height={168} dir={-1} arm={52} />
+        <LightPole x={536} y={392} height={172} dir={-1} arm={52} />
       </g>
 
-      {/* ============================= o carro em primeiro plano (depth .9) */}
-      {/* TRÊS ATORES EMPILHADOS, um por gesto — nenhum deles no elemento que
-          leva o `data-depth`:
-            1. construção  o carro entra rodando pela esquerda e assenta;
-            2. imprevisto  o impacto o joga para trás e para cima, com um giro
-                           curto que levanta a dianteira (giro POSITIVO: com o
-                           pivô na base, é o lado esquerdo que sobe);
-            3. proteção    o conjunto se recompõe e ele volta quase ao lugar.
-          Os decalques da batida (teia no para-brisa, capô amassado, farol
-          apagado) moram DENTRO dos atores: são parte do carro e têm de viajar
-          com ele. Só as faíscas ficam de fora — o ponto de contato não anda. */}
+      {/* ======================= OS DOIS VEÍCULOS, MESMO PLANO (depth .9) == */}
+      {/* Um único `data-depth` para os dois: no mesmo grupo eles recebem o mesmo
+          deslocamento de parallax, e o contato medido no papel continua valendo
+          na tela. Os atores ficam em grupos de DENTRO — parallax e ator escrevem
+          os dois em `transform` e, no mesmo elemento, um anularia o outro. */}
       <g data-depth="0.9">
+        {/* ---------------------------------------------------- o carro --- */}
         <g
           data-move-when="build"
-          data-move-x="-560"
-          data-move-dur="1.2"
+          data-move-x="-430"
+          data-move-dur="1.05"
           data-move-ease="power1.out"
         >
-        <g
-          data-move-when="risk"
-          data-move-x="34"
-          data-move-y="-16"
-          data-move-rot="5"
-          data-move-origin="50% 100%"
-          data-move-dur="0.17"
-          data-move-ease="power4.out"
-        >
-        <g
-          data-move-when="shield"
-          data-move-x="-24"
-          data-move-y="12"
-          data-move-rot="-3.6"
-          data-move-origin="50% 100%"
-          data-move-dur="0.44"
-          data-move-ease="power2.inOut"
-        >
-        <Contact id={ID} x={168} y={358} rx={118} ry={13} />
-        <g data-scene-fill>
-          <Car x={168} y={358} />
-        </g>
+          {/* ATOR 1 — AVANÇA até encostar no caminhão */}
+          <g
+            data-move-when="risk"
+            data-move-x={AVANCO_CARRO}
+            data-move-dur="0.1"
+            data-move-ease="power2.in"
+          >
+            {/* ATOR 2 — RECUA do choque, girando sobre o pneu traseiro */}
+            <g
+              data-move-when="risk"
+              data-move-x="-22"
+              data-move-y="-4"
+              data-move-rot="-9"
+              data-move-origin={origem(CAIXA_CARRO, CAR_RODA_TRAS, GY)}
+              data-move-dur="0.25"
+              data-move-ease="power4.in"
+            >
+              {/* ATOR 3 — na proteção ele assenta de novo */}
+              <g
+                data-move-when="shield"
+                data-move-x="-6"
+                data-move-y="4"
+                data-move-rot="6"
+                data-move-origin={origem(CAIXA_CARRO, CAR_RODA_TRAS, GY)}
+                data-move-dur="0.5"
+                data-move-ease="power2.inOut"
+              >
+                <Ancora box={CAIXA_CARRO} />
+                <Contact id={ID} x={CAR_X} y={GY + 2} rx={108} ry={12} />
+                {/* SEM `data-scene-fill` nos dois veículos: a materialização da
+                    cena é escalonada e eles são os últimos grupos de massa da
+                    lista — no instante em que o usuário lê a construção, o
+                    caminhão ainda estaria translúcido. Quem ENTRA RODANDO não
+                    precisa aparecer aos poucos, e os contornos continuam sendo
+                    desenhados pelo DrawSVG. */}
+                <Car x={CAR_X} y={GY} s={CAR_S} dir={-1} />
 
-        <g data-scene-fill>
-        {/* o facho do farol varrendo o asfalto à frente */}
-        <LightCone x={62} y={313} length={136} spread={36} angle={168} opacity={0.26} />
-        <LightCone x={62} y={313} length={96} spread={14} angle={173} opacity={0.2} />
-        {/* mancha do farol no asfalto molhado, e o reflexo vertical embaixo */}
-        <ellipse cx="6" cy="352" rx="72" ry="14" fill="rgb(var(--brand-2) / .16)" />
-        <ellipse
-          cx="58"
-          cy="374"
-          rx="16"
-          ry="26"
-          fill="rgb(var(--brand-2) / .18)"
-          filter={`url(#${ID}-soft)`}
-        />
-        {/* reflexo âmbar da lanterna traseira no piso molhado */}
-        <ellipse
-          cx="272"
-          cy="374"
-          rx="13"
-          ry="24"
-          fill="rgb(var(--alert) / .2)"
-          filter={`url(#${ID}-soft)`}
-        />
+                <g>
+                  {/* o facho do farol, apontado para o caminhão */}
+                  <LightCone
+                    x={CAR_NOSE - 6}
+                    y={315}
+                    length={112}
+                    spread={22}
+                    angle={11}
+                    opacity={0.15}
+                  />
+                  {/* mancha do farol no asfalto e reflexo âmbar da lanterna */}
+                  <ellipse
+                    cx="300"
+                    cy="352"
+                    rx="60"
+                    ry="12"
+                    fill="rgb(var(--brand-2) / .14)"
+                    filter={`url(#${ID}-soft)`}
+                  />
+                  <ellipse
+                    cx="70"
+                    cy="368"
+                    rx="14"
+                    ry="20"
+                    fill="rgb(var(--alert) / .18)"
+                    filter={`url(#${ID}-soft)`}
+                  />
+                </g>
 
-        {/* linhas de velocidade: o ar rasgado logo atrás do carro */}
-        <Running
-          d="M280 302H346"
-          width={2.2}
-          dash="12 28"
-          dur={0.45}
-          color="rgb(var(--brand-2) / .38)"
-        />
-        <Running
-          d="M284 320H338"
-          width={1.6}
-          dash="8 32"
-          dur={0.38}
-          color="rgb(var(--brand-2) / .3)"
-          delay={0.16}
-        />
-        </g>
+                {/* --- decalques da batida, presos ao carro ---------------- */}
 
-        {/* --- decalques da batida, presos ao carro --------------------- */}
+                {/* o para-brisa trinca: a teia NASCE no canto do vidro que
+                    recebeu o golpe e se abre a partir dele. */}
+                <Cresce
+                  fator={2.2}
+                  px={200}
+                  py={295}
+                  box={CAIXA_TEIA}
+                  dur={0.3}
+                  ease="power3.out"
+                >
+                  <Fracture d="M203 288L193 295L200 301L188 303" delay={0.06} />
+                  <g data-scene-risk data-risk-delay="0.1">
+                    <path
+                      d="M203 288L206 297M193 295L180 292M200 301L204 306M196 291L186 286"
+                      fill="none"
+                      stroke="rgb(var(--brand-2) / .55)"
+                      strokeWidth="1.1"
+                      strokeLinecap="round"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </g>
+                </Cresce>
 
-        {/* o vidro trinca: a teia NASCE no ponto de impacto e se abre a partir
-            dele. `px`/`py` é o centro da caixa da teia, que é onde o vidro
-            estourou — encolher e crescer em torno desse ponto mantém a origem
-            do estilhaço no lugar. */}
-        <Cresce fator={2.2} px={142.5} py={288.5} origin="50% 50%" dur={0.3} ease="power3.out">
-          <Fracture d="M134 281L143 289L130 295L139 302" delay={0.08} />
-          <Fracture d="M143 289L157 285" delay={0.1} />
-          <g data-scene-risk data-risk-delay="0.12">
-            <path
-              d="M143 289L136 275M143 289L152 300M143 289L128 286M137 279L149 277M133 293L136 300"
-              fill="none"
-              stroke="rgb(var(--brand-2) / .55)"
-              strokeWidth="1.1"
-              strokeLinecap="round"
-              vectorEffect="non-scaling-stroke"
-            />
+                {/* o capô amassa e o farol estoura */}
+                <g data-scene-risk data-risk-delay="0.14">
+                  <path {...mass('deep')} d="M211 306L222 298L231 308L242 300L245 320L211 322Z" />
+                  <path
+                    {...detail(0.42, 1.3)}
+                    d="M216 320L223 302M228 321L233 306M238 320L243 305"
+                  />
+                  <path d="M240 309L257 312V321L240 318Z" fill={INK.void} opacity=".85" />
+                  <path
+                    d="M240 309L257 321M257 312L240 318"
+                    fill="none"
+                    stroke="rgb(var(--brand-2) / .5)"
+                    strokeWidth="1.2"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </g>
+              </g>
+            </g>
           </g>
-        </Cresce>
+        </g>
 
-        {/* o capô amassa e o farol apaga */}
-        <g data-scene-risk data-risk-delay="0.16">
-          <path {...mass('deep')} d="M70 302L86 291L98 301L112 294V304L70 306Z" />
-          <path {...detail(0.4, 1.3)} d="M76 304L86 293M92 305L98 296M104 304L110 297" />
-          {/* o farol quebrado: o vão escuro no lugar da luz */}
-          <path d="M64 308L82 311V319L64 316Z" fill={INK.void} opacity=".8" />
-          <path
-            d="M64 308L82 319M82 311L64 316"
-            fill="none"
-            stroke="rgb(var(--brand-2) / .5)"
-            strokeWidth="1.2"
-            vectorEffect="non-scaling-stroke"
-          />
-        </g>
-        </g>
-        </g>
+        {/* ------------------------------------------------- o caminhão --- */}
+        <g
+          data-move-when="build"
+          data-move-x="430"
+          data-move-dur="1.05"
+          data-move-ease="power1.out"
+        >
+          {/* ATOR 1 — AVANÇA até encostar no carro */}
+          <g
+            data-move-when="risk"
+            data-move-x={AVANCO_CAMINHAO}
+            data-move-dur="0.1"
+            data-move-ease="power2.in"
+          >
+            {/* ATOR 2 — RECUA pouco: a massa é outra */}
+            <g
+              data-move-when="risk"
+              data-move-x="10"
+              data-move-y="2"
+              data-move-rot="1.6"
+              data-move-origin={origem(CAIXA_CAMINHAO, TRK_RODA_TRAS, GY)}
+              data-move-dur="0.25"
+              data-move-ease="power4.in"
+            >
+              <g
+                data-move-when="shield"
+                data-move-x="6"
+                data-move-y="-2"
+                data-move-rot="-1.2"
+                data-move-origin={origem(CAIXA_CAMINHAO, TRK_RODA_TRAS, GY)}
+                data-move-dur="0.5"
+                data-move-ease="power2.inOut"
+              >
+                <Ancora box={CAIXA_CAMINHAO} />
+                <Contact id={ID} x={TRK_X} y={GY + 2} rx={102} ry={12} opacity={0.85} />
+                <Truck x={TRK_X} y={GY} scale={TRK_S} />
+
+                <g>
+                  {/* o facho do caminhão, apontado para o carro: os dois cones
+                      se cruzam em cima do ponto de encontro */}
+                  <LightCone
+                    x={TRK_NOSE}
+                    y={313}
+                    length={92}
+                    spread={20}
+                    angle={170}
+                    opacity={0.15}
+                  />
+                  <ellipse
+                    cx="470"
+                    cy="352"
+                    rx="16"
+                    ry="9"
+                    fill="rgb(var(--alert) / .2)"
+                    filter={`url(#${ID}-soft)`}
+                  />
+                </g>
+
+                {/* --- decalques da batida, presos ao caminhão ------------- */}
+                <g data-scene-risk data-risk-delay="0.18">
+                  <path {...mass('deep')} d="M308 300L318 292L323 304L322 332L308 333Z" />
+                  <path {...detail(0.4, 1.3)} d="M312 331L317 300M319 330L322 306" />
+                  <path d="M307 306L317 308V317L307 315Z" fill={INK.void} opacity=".85" />
+                  <path
+                    d="M307 306L317 317M317 308L307 315"
+                    fill="none"
+                    stroke="rgb(var(--brand-2) / .5)"
+                    strokeWidth="1.2"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </g>
+                <Fracture d="M322 284L332 292L324 297L336 300" delay={0.2} />
+              </g>
+            </g>
+          </g>
         </g>
       </g>
 
-      {/* O asfalto correndo debaixo do carro — a camada mais próxima e a que
-          carrega a velocidade: a faixa central chapada, uma estria de brilho
-          molhado atrás dela e um rastro rápido rente ao rodapé do quadro. */}
+      {/* O asfalto correndo rente ao rodapé do quadro: a camada mais próxima e
+          a que carrega a velocidade. */}
       <g data-scene-fill data-depth="1">
         <Running
-          d="M-30 366H590"
-          width={2}
-          dash="16 24"
-          dur={0.8}
-          color={INK.mid}
-          opacity={0.5}
-        />
-        <Running
-          d="M-30 381H590"
+          d="M-30 388H590"
           width={7}
           dash="26 14"
           dur={0.5}
           color={INK.near}
-          opacity={0.85}
+          opacity={0.8}
         />
         <Running
-          d="M-30 393H590"
+          d="M-30 397H590"
           width={3}
           dash="20 20"
           dur={0.32}
@@ -746,123 +850,123 @@ export function RoadScene() {
 
       {/* ==================================================== o imprevisto == */}
 
-      {/* 0 — o impacto na dianteira: clarão, estilhaço de energia e faísca.
-             O grupo NÃO viaja com o carro: o ponto de contato fica onde a
-             batida aconteceu, e é o carro que recua a partir dele. O que se
-             move aqui é a ABERTURA do estilhaço — as faíscas saltam para fora
-             do ponto de impacto. */}
+      {/* 0 — O CHOQUE, no ponto de contato medido: clarão, estilhaços de energia
+             e faíscas. O grupo NÃO viaja com nenhum dos dois veículos — o ponto
+             onde as latarias se encontraram fica parado, e são eles que recuam
+             a partir dele. O que se move aqui é a ABERTURA do estilhaço. */}
       <g
         data-move-when="risk"
-        data-move-scale="1.35"
+        data-move-scale="1.4"
         data-move-origin="50% 50%"
-        data-move-dur="0.26"
+        data-move-dur="0.24"
         data-move-ease="power3.out"
       >
         <g data-scene-risk data-risk-delay="0">
           <ellipse
-            cx="66"
-            cy="324"
-            rx="52"
-            ry="46"
+            cx={IMPACTO_X}
+            cy={IMPACTO_Y}
+            rx="50"
+            ry="40"
             fill="rgb(var(--brand-2) / .22)"
             filter={`url(#${ID}-haze)`}
           />
           <ellipse
-            cx="66"
-            cy="324"
-            rx="30"
-            ry="26"
-            fill="rgb(var(--alert) / .28)"
+            cx={IMPACTO_X}
+            cy={IMPACTO_Y}
+            rx="26"
+            ry="22"
+            fill="rgb(var(--alert) / .3)"
             filter={`url(#${ID}-haze)`}
           />
           <g filter={`url(#${ID}-glow)`}>
-            <path {...shard('M66 324L30 306L42 336Z')} />
-            <path {...shard('M66 324L44 350L64 348Z')} />
-            <path {...shard('M66 324L48 292L70 302Z')} />
+            <path {...shard('M285 324L258 308L266 334Z')} />
+            <path {...shard('M285 324L272 348L290 344Z')} />
+            <path {...shard('M285 324L302 302L308 322Z')} />
           </g>
-          <Sparks x={66} y={324} count={8} radius={26} tone="alert" />
-          <Sparks x={66} y={324} count={5} radius={17} tone="brand" />
+          <Sparks x={IMPACTO_X} y={IMPACTO_Y} count={8} radius={24} tone="alert" />
+          <Sparks x={IMPACTO_X} y={IMPACTO_Y} count={5} radius={18} tone="brand" />
         </g>
       </g>
 
-      {/* 1 — o asfalto guarda a frenagem: a marca SE ESTENDE a partir do pneu
-             que travou (origem no canto inferior esquerdo da caixa, que é onde
-             a roda estava quando a borracha começou a queimar). */}
+      {/* 1 — os estilhaços que sobraram no asfalto, embaixo do ponto de
+             contato: lascas de plástico e vidro em cor de massa. */}
+      <g data-scene-risk data-risk-delay="0.24">
+        <path {...mass('ink')} d="M262 352l7 3-8 2Z" />
+        <path {...mass('deep')} d="M296 358l9 2-8 3Z" />
+        <path {...mass('ink')} d="M276 364l6 4-9 1Z" />
+        <path
+          d="M308 350l6 3-7 2Z"
+          fill="rgb(var(--brand-2) / .55)"
+        />
+      </g>
+
+      {/* 2 — o asfalto guarda a frenagem: cada marca SE ESTENDE a partir do
+             pneu que travou. Ela nasce onde a borracha começou a queimar (o
+             ponto fixo do `Cresce`) e cresce até onde o veículo parou.
+             A do carro fica atrás dele, à esquerda; a do caminhão, à direita. */}
       <g data-scene-risk data-risk-delay="0.2">
-        <Cresce fator={1.9} px={112} py={372} origin="0% 100%" dur={0.42}>
+        <Cresce fator={1.9} px={44} py={354} box={CAIXA_FREIO_CARRO} dur={0.42}>
           <path
-            d="M112 361C182 358 244 350 302 338"
+            d="M44 353C90 354 130 356 168 358"
             fill="none"
             stroke={`${INK.ink}`}
-            strokeWidth="6"
+            strokeWidth="5.5"
             strokeLinecap="round"
-            strokeDasharray="34 14"
+            strokeDasharray="30 12"
             opacity=".5"
           />
           <path
-            d="M124 372C198 368 266 356 322 343"
+            d="M52 362C104 363 158 365 214 366"
             fill="none"
             stroke={`${INK.deep}`}
             strokeWidth="4.5"
             strokeLinecap="round"
-            strokeDasharray="26 15"
-            opacity=".6"
+            strokeDasharray="24 14"
+            opacity=".55"
+          />
+        </Cresce>
+      </g>
+      <g data-scene-risk data-risk-delay="0.24">
+        <Cresce fator={1.9} px={532} py={352} box={CAIXA_FREIO_CAMINHAO} dur={0.42}>
+          <path
+            d="M532 351C494 352 462 354 436 356"
+            fill="none"
+            stroke={`${INK.ink}`}
+            strokeWidth="5.5"
+            strokeLinecap="round"
+            strokeDasharray="30 12"
+            opacity=".5"
+          />
+          <path
+            d="M528 361C484 362 448 363 418 364"
+            fill="none"
+            stroke={`${INK.deep}`}
+            strokeWidth="4.5"
+            strokeLinecap="round"
+            strokeDasharray="24 14"
+            opacity=".55"
           />
         </Cresce>
       </g>
 
-      {/* 2 — a poeira que o impacto levanta, em cor de massa: sobe e se
-             espalha a partir do pé da coluna. */}
-      <g data-scene-risk data-risk-delay="0.26">
+      {/* 3 — a poeira que o impacto levanta, em cor de massa: sobe do ponto de
+             contato e se espalha. */}
+      <g data-scene-risk data-risk-delay="0.3">
         <g
           data-move-when="risk"
-          data-move-y="-28"
-          data-move-scale="1.4"
+          data-move-y="-26"
+          data-move-scale="1.45"
           data-move-origin="50% 100%"
           data-move-dur="0.6"
           data-move-ease="power1.out"
         >
-          <Smoke id={ID} x={96} y={296} scale={0.9} />
-          <Smoke id={ID} x={44} y={350} scale={0.68} />
-        </g>
-      </g>
-
-      {/* 3 — o sentido do tombamento: a seta que marca o giro da carreta.
-             Fica FORA do ator que tomba, senão giraria junto e deixaria de
-             indicar coisa nenhuma. */}
-      <g data-scene-risk data-risk-delay="0.34">
-        <path {...accentStroke(1.8, 0.55)} strokeDasharray="6 7" d="M426 232A40 40 0 00396 260" />
-        <path {...accent(0.85)} d="M404 250l-10 13 14-2z" />
-      </g>
-
-      {/* 4 — o veículo da frota que não volta ao pátio: sobra a vaga vazia.
-          A escala fica no grupo DE FORA e o `data-scene-risk` no grupo de
-          dentro: o GSAP reescreve o `transform` do elemento que anima, e se a
-          escala estivesse nele o furgão terminaria em tamanho de primeiro plano. */}
-      <g transform="translate(296 331) scale(0.55)">
-        <g data-scene-risk data-risk-delay="0.38">
-          <path
-            d={VAN_BODY}
-            fill="none"
-            stroke="rgb(var(--brand-2) / .5)"
-            strokeWidth="1.8"
-            strokeDasharray="7 6"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-          <path
-            d="M-20 -27L16 -6M16 -27L-20 -6"
-            fill="none"
-            stroke="rgb(var(--brand-2) / .85)"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-          />
+          <Smoke id={ID} x={296} y={330} scale={0.95} />
+          <Smoke id={ID} x={254} y={346} scale={0.7} />
         </g>
       </g>
 
       {/* ===================================================== a proteção == */}
-      <ShieldSeal id={ID} x={424} y={84} size={92} />
+      <ShieldSeal id={ID} x={424} y={78} size={92} />
     </Scene>
   );
 }

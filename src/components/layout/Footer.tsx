@@ -1,10 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { site, formattedAddress, mapsUrl } from '@/config/site';
+import { site, addressLines, mapsUrl } from '@/config/site';
 import { footerNav, legalNav } from '@/config/navigation';
 import { insurances } from '@/config/insurances';
-import { whatsappUrl, telUrl, mailUrl } from '@/lib/whatsapp';
+import { whatsappUrl, mailUrl } from '@/lib/whatsapp';
 import { track } from '@/lib/analytics';
 import Logo from '@/components/brand/Logo';
 import Icon, { type IconName } from '@/components/icons';
@@ -20,9 +20,8 @@ const socialIcons: [keyof typeof site.social, IconName, string][] = [
 export function Footer() {
   const year = new Date().getFullYear();
   const wa = whatsappUrl();
-  const tel = telUrl();
   const mail = mailUrl();
-  const address = formattedAddress();
+  const linhasEndereco = addressLines();
   const maps = mapsUrl();
 
   return (
@@ -37,7 +36,7 @@ export function Footer() {
 
       <div className="shell relative">
         {/* topo */}
-        <div className="grid gap-12 py-16 lg:grid-cols-[1.35fr_.9fr_.9fr_1fr] lg:gap-10 lg:py-20">
+        <div className="grid gap-12 py-16 lg:grid-cols-[1.2fr_.82fr_.82fr_1.3fr] lg:gap-10 lg:py-20">
           {/* marca */}
           <div>
             <Logo height={52} />
@@ -45,7 +44,7 @@ export function Footer() {
               {site.description}
             </p>
 
-            {(wa || tel || mail) && (
+            {(wa || mail) && (
               <div className="mt-7 flex flex-col gap-3">
                 {wa && (
                   <a
@@ -131,34 +130,37 @@ export function Footer() {
               Contato
             </h2>
             <ul className="mt-5 flex flex-col gap-4 text-[.96875rem]">
-              {tel && site.contact.phone && (
-                <li>
-                  <a
-                    href={tel}
-                    onClick={() => track('phone_click', { placement: 'footer' })}
-                    className="flex min-h-[40px] items-start gap-2.5 py-1 text-fg-3 transition-colors duration-300 hover:text-fg"
-                  >
-                    <Icon name="phone" size={16} className="mt-0.5 shrink-0 text-accent-ink" />
-                    {site.contact.phone}
-                  </a>
-                </li>
-              )}
+              {/* O NÚMERO não aparece escrito em lugar nenhum do site: o contato
+                  telefônico acontece pelo WhatsApp, e o número existe só como
+                  destino do link daquele botão. Ver `site.contact` — os campos
+                  continuam preenchidos, mas não são exibidos. */}
               {mail && site.contact.email && (
                 <li>
                   <a
                     href={mail}
-                    className="flex min-h-[40px] items-start gap-2.5 break-all py-1 text-fg-3 transition-colors duration-300 hover:text-fg"
+                    className="flex min-h-[40px] items-center gap-2.5 py-1 text-fg-3 transition-colors duration-300 hover:text-fg"
                   >
-                    <Icon name="mail" size={16} className="mt-0.5 shrink-0 text-accent-ink" />
-                    {site.contact.email}
+                    <Icon name="mail" size={16} className="shrink-0 text-accent-ink" />
+                    {/* `whitespace-nowrap` + corpo um pouco menor: o endereço de
+                        e-mail tem 30 caracteres e, com `break-all`, quebrava no
+                        meio da palavra ("...com.b / r"). A coluna foi alargada
+                        para caber a linha inteira. */}
+                    <span className="whitespace-nowrap text-[.9375rem]">{site.contact.email}</span>
                   </a>
                 </li>
               )}
-              {address && (
+              {linhasEndereco.length > 0 && (
                 <li className="flex items-start gap-2.5 text-fg-3">
                   <Icon name="map-pin" size={16} className="mt-0.5 shrink-0 text-accent-ink" />
-                  <span>
-                    {address}
+                  <span className="flex flex-col gap-0.5">
+                    {/* Uma linha por parte do endereço. Numa string única com
+                        separadores, a coluna estreita quebrava "741 —" da
+                        "Sala 02". */}
+                    {linhasEndereco.map((linha) => (
+                      <span key={linha} className="whitespace-nowrap text-[.9375rem]">
+                        {linha}
+                      </span>
+                    ))}
                     {maps && (
                       <>
                         {' '}
@@ -194,7 +196,7 @@ export function Footer() {
             </ul>
 
             {/* aviso quando os dados ainda não foram preenchidos */}
-            {!tel && !mail && !address && (
+            {!mail && !linhasEndereco.length && (
               <p className="mt-5 rounded-xl border border-hair bg-tint/[.03] p-4 text-[.875rem] leading-relaxed text-fg-4">
                 Dados de contato ainda não configurados. Preencha em{' '}
                 <code className="text-accent-ink">src/config/site.ts</code>.

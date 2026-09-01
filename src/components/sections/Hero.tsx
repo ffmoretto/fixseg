@@ -132,7 +132,6 @@ export function Hero() {
             data-hero="eyebrow"
             className="eyebrow translate-y-3 opacity-0"
           >
-            <Icon name="spark" size={13} />
             {site.tagline} · Pessoas e empresas
           </p>
 

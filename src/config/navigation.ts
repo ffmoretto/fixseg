@@ -13,6 +13,10 @@ export const mainNav: NavItem[] = [
   { label: 'Dúvidas frequentes', href: '/#faq' },
   { label: 'Contato', href: '/#contato' },
 ];
+/* A seção de curiosidades NÃO entra aqui de propósito: os seis itens acima já
+   ocupam cerca de 600px e, somados à logo, ao seletor de tema, ao atalho da
+   calculadora e ao CTA, é o limite do que cabe na barra. O atalho para ela
+   existe nos links do rodapé. */
 
 /**
  * Atalho da calculadora de bônus.
@@ -30,14 +34,23 @@ export const calculadoraNav: NavItem = {
 /** Rótulo curto do botão do cabeçalho, quando há espaço para texto. */
 export const calculadoraLabelCurto = 'Bônus';
 
-/** Links rápidos do footer. */
+/**
+ * Links rápidos do footer.
+ *
+ * Tem entrada para `/#curiosidades` e NÃO tem para `/#blog`. A diferença é a
+ * garantia de existência: a seção de curiosidades é conteúdo próprio, sempre
+ * presente (`src/config/curiosities.ts`), então o atalho nunca cai no vazio. A
+ * de artigos só aparece depois que a corretora publicar o primeiro post — e um
+ * link fixo para ela apontaria para um destino inexistente no estado padrão de
+ * uma publicação nova.
+ */
 export const footerNav: NavItem[] = [
   { label: 'Início', href: '/#inicio' },
   { label: 'Seguros', href: '/#seguros' },
   { label: 'Por que a FIXSEG', href: '/#diferenciais' },
   { label: 'Como funciona', href: '/#como-funciona' },
   { label: 'Sobre nós', href: '/#sobre' },
-  { label: 'Conteúdo', href: '/#blog' },
+  { label: 'Curiosidades', href: '/#curiosidades' },
   { label: 'Dúvidas frequentes', href: '/#faq' },
   { label: 'Calculadora de bônus', href: '/calculadora-bonus' },
   { label: 'Cotação', href: '/cotacao' },

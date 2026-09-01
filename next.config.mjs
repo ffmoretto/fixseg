@@ -32,6 +32,10 @@ const nextConfig = {
       { protocol: 'https', hostname: 'lh5.googleusercontent.com' },
       { protocol: 'https', hostname: 'lh6.googleusercontent.com' },
       { protocol: 'https', hostname: 'streetviewpixels-pa.googleapis.com' },
+      /* Já houve aqui uma derivação de hosts para as fotos das notícias de um
+         portal de terceiro. A seção saiu (ver src/components/sections/Blog.tsx)
+         e a lista voltou a ter só o que o site realmente carrega de fora: as
+         fotos de quem avalia a corretora no Google. */
     ],
   },
   experimental: {

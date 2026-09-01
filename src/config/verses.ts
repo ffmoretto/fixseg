@@ -30,8 +30,6 @@ export const verseBand = {
   intervalo: 14,
   /** Crédito da tradução, exibido junto da referência. */
   traducao: 'Almeida, domínio público',
-  /** Frase curta que apresenta a faixa. Deixe vazia para não exibir. */
-  chamada: 'Um negócio que crê em Deus acima de tudo',
 } as const;
 
 /**

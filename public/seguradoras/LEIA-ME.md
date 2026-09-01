@@ -5,6 +5,16 @@ editados à mão**. Todos saem na mesma tela de **280×88 px**, com a mesma méd
 geométrica de tinta — é isso que faz marcas de proporções muito diferentes
 (Bradesco 6,2:1 e HDI 1:1) parecerem do mesmo tamanho no carrossel.
 
+Cada companhia tem **dois arquivos**:
+
+- `nome.png` — a marca na cor original, para o tema claro (placa branca);
+- `nome-escuro.png` — a **reversa monocromática branca**, para o tema escuro
+  (cartão de vidro escuro).
+
+Os dois precisam existir. Se faltar a reversa, basta não preencher `logoDark` em
+`src/config/content.ts`: aquele cartão mantém a placa clara também no escuro —
+funciona, mas destoa dos outros.
+
 ## Para acrescentar um parceiro
 
 1. Coloque o arquivo de origem (PDF, PNG ou SVG) numa pasta de trabalho.

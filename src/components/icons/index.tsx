@@ -48,7 +48,6 @@ export type IconName =
   | 'alert'
   | 'quote'
   | 'star'
-  | 'spark'
   | 'clock'
   | 'calculator'
   | 'percent'
@@ -277,12 +276,12 @@ const paths: Record<IconName, React.ReactNode> = {
       d="M12 2.9l2.72 5.51 6.08.89-4.4 4.29 1.04 6.05L12 16.78l-5.44 2.86 1.04-6.05-4.4-4.29 6.08-.89z"
     />
   ),
-  spark: (
-    <>
-      <path {...S} data-icon-accent d="M12 3.8l1.7 4.9 4.9 1.7-4.9 1.7L12 17l-1.7-4.9L5.4 10.4l4.9-1.7z" />
-      <path {...S} d="M18.4 15.4l.7 2 2 .7-2 .7-.7 2-.7-2-2-.7 2-.7z" />
-    </>
-  ),
+  /* O ícone `spark` (faísca de quatro pontas) FOI REMOVIDO do registro, não
+     apenas dos componentes. Ele abria todas as etiquetas de seção e a faixa de
+     versículos, e o cliente identificou aquela estrelinha repetida como marca
+     de "site gerado por IA". Deixar o desenho aqui só convidaria a voltar a
+     usá-lo sem perceber. O `star` (estrela cheia, cinco pontas) continua: é o
+     das notas de avaliação do Google, que é outra coisa. */
   clock: (
     <>
       <circle {...S} cx="12" cy="12" r="8.4" />

@@ -28,8 +28,31 @@ import { prefersReducedMotion } from '@/hooks/useReducedMotion';
  * =============================================================================
  */
 
-/* Altura do header quando rolado (76px) mais uma folga de respiro. */
-const HEADER_OFFSET = 96;
+/* Folga de respiro entre o cabeçalho e o título da seção de destino. */
+const FOLGA = 14;
+
+/* Reserva usada quando a barra ainda não existe no DOM (primeiro clique antes
+   da montagem do header). Corresponde à barra rolada mais a folga. */
+const OFFSET_PADRAO = 96;
+
+/**
+ * Quanto descontar da posição de destino, MEDIDO na hora.
+ *
+ * Antes isto era uma constante (96px, "a barra rolada de 76px mais folga"), e o
+ * número envelheceu duas vezes: a barra cresceu junto com a logo e passou a ter
+ * altura diferente no celular (84px) e no desktop (92px). Medir o elemento
+ * resolve de uma vez — inclusive para quem mexer nas alturas depois, sem
+ * precisar lembrar de vir aqui.
+ *
+ * Ler `offsetHeight` num tratador de clique é seguro: acontece uma vez por
+ * clique, fora do render, então não há divergência de hidratação nem
+ * "layout thrash" durante a animação.
+ */
+function headerOffset(): number {
+  if (typeof document === 'undefined') return OFFSET_PADRAO;
+  const barra = document.querySelector<HTMLElement>('[data-header-bar]');
+  return barra ? barra.offsetHeight + FOLGA : OFFSET_PADRAO;
+}
 
 export function AnchorScroll() {
   /* Leitura síncrona: já correta no primeiro render do cliente, então a
@@ -40,6 +63,9 @@ export function AnchorScroll() {
   useEffect(() => {
     const scrollToTarget = (target: Element, instant = false) => {
       const smoother = ScrollSmoother.get();
+      /* Medido a cada rolagem: a barra tem alturas diferentes no celular e no
+         desktop, e muda de altura ao rolar. */
+      const HEADER_OFFSET = headerOffset();
 
       if (smoother) {
         smoother.scrollTo(target as HTMLElement, !instant, `top ${HEADER_OFFSET}px`);
@@ -129,6 +155,7 @@ export function AnchorScroll() {
     if (!target) return;
 
     const id = window.setTimeout(() => {
+      const HEADER_OFFSET = headerOffset();
       const smoother = ScrollSmoother.get();
       if (smoother) {
         smoother.scrollTo(target, false, `top ${HEADER_OFFSET}px`);

@@ -48,34 +48,68 @@ function classeDoNome(nome: string): string {
 
 function CartaoParceiro({ parceiro }: { parceiro: Insurer }) {
   const temLogo = !!parceiro.logo;
+  /* Existe versão reversa (monocromática branca) para o tema escuro? */
+  const temEscuro = !!parceiro.logoDark;
 
   return (
     <div
       className={cn(
-        'group/parceiro grid h-[104px] w-[196px] place-items-center rounded-2xl border transition-[border-color,transform,box-shadow] duration-500 ease-brand',
+        'group/parceiro grid h-[104px] w-[196px] place-items-center rounded-2xl border transition-[border-color,background-color,transform,box-shadow] duration-500 ease-brand',
         'hover:-translate-y-[3px] md:h-[112px] md:w-[212px]',
-        temLogo
-          ? /* PLACA CLARA nos dois temas: os arquivos das seguradoras são tinta
-               escura sobre transparente, e sobre fundo escuro desapareceriam.
-               Recolorir marca de terceiro não é opção. Ver `--logo-plate`. */
-            'border-hair bg-logo-plate px-4 shadow-card hover:border-brand-2/45 hover:shadow-lift'
-          : 'border-hair bg-tint/[.03] px-5 hover:border-brand-2/35 hover:bg-tint/[.06]',
+        !temLogo && 'border-hair bg-tint/[.03] px-5 hover:border-brand-2/35 hover:bg-tint/[.06]',
+        /* TEMA CLARO — placa branca. Os arquivos das companhias são tinta
+           escura sobre transparente; sobre a página clara eles já leem, e a
+           placa branca dá o enquadramento uniforme. */
+        temLogo && 'border-hair bg-logo-plate px-4 shadow-card hover:border-brand-2/45 hover:shadow-lift',
+        /* TEMA ESCURO — sem placa branca. O cartão vira vidro escuro e a marca
+           entra na versão reversa. Um mural de retângulos brancos sobre página
+           preta é o que o cliente recusou, com razão: rouba a atenção de tudo
+           em volta. */
+        temLogo &&
+          temEscuro &&
+          'dark:border-hair dark:bg-tint/[.055] dark:shadow-none dark:hover:border-brand-2/50 dark:hover:bg-tint/[.09]',
       )}
     >
       {temLogo ? (
         /* Todos os arquivos foram normalizados para a MESMA tela de 280×88 com
            a mesma média geométrica de tinta (ver scripts/logos.py e o LEIA-ME
            da pasta). Por isso aqui não há ajuste por logo: um único
-           `object-contain` já entrega todos no mesmo tamanho óptico. */
-        <Image
-          src={parceiro.logo as string}
-          alt={parceiro.name}
-          width={280}
-          height={88}
-          loading="lazy"
-          sizes="212px"
-          className="h-auto w-full max-w-[152px] object-contain transition-transform duration-500 ease-brand group-hover/parceiro:scale-[1.04] md:max-w-[164px]"
-        />
+           `object-contain` já entrega todos no mesmo tamanho óptico.
+
+           As duas versões ficam no DOM e a troca é por CSS (`dark:`), não por
+           estado do React: o tema é resolvido antes da primeira pintura, e
+           decidir isso em JavaScript causaria divergência de hidratação. */
+        <>
+          <Image
+            src={parceiro.logo as string}
+            alt={parceiro.name}
+            width={280}
+            height={88}
+            loading="lazy"
+            sizes="212px"
+            className={cn(
+              'h-auto w-full max-w-[152px] object-contain transition-transform duration-500 ease-brand group-hover/parceiro:scale-[1.04] md:max-w-[164px]',
+              temEscuro && 'dark:hidden',
+            )}
+          />
+          {temEscuro && (
+            <Image
+              src={parceiro.logoDark as string}
+              alt={parceiro.name}
+              width={280}
+              height={88}
+              loading="lazy"
+              sizes="212px"
+              /* `alt` de verdade, e NÃO `aria-hidden`: a versão clara fica com
+                 `display:none` no tema escuro, e `display:none` sai da árvore
+                 de acessibilidade. Marcar esta como decorativa deixaria a
+                 companhia sem nome nenhum para o leitor de tela no tema
+                 escuro. Só uma das duas está visível por vez, então não há
+                 anúncio duplicado. */
+              className="hidden h-auto w-full max-w-[152px] object-contain opacity-90 transition-[transform,opacity] duration-500 ease-brand group-hover/parceiro:scale-[1.04] group-hover/parceiro:opacity-100 dark:block md:max-w-[164px]"
+            />
+          )}
+        </>
       ) : (
         /* Cartão tipográfico: o nome é a peça gráfica. Fonte da marca, caixa
            equilibrada e um fio degradê que assina o bloco — para parecer
@@ -100,7 +134,16 @@ function CartaoParceiro({ parceiro }: { parceiro: Insurer }) {
   );
 }
 
-/** Envolve o cartão em link quando a companhia tem site. */
+/**
+ * Um item da faixa.
+ *
+ * SEM LINK, de propósito. Cada logo já foi um `<a target="_blank">` para o site
+ * da seguradora, e isso saiu a pedido do cliente: a faixa existe para mostrar
+ * com quem a corretora trabalha, não para mandar o visitante embora — e o
+ * caminho de saída mais indesejado é justamente o que leva a quem também vende
+ * seguro. O campo `url` continua existindo em `content.ts` → `insurers` como
+ * registro; nada no site o usa.
+ */
 function ItemDaFaixa({
   parceiro,
   clone,
@@ -109,24 +152,9 @@ function ItemDaFaixa({
   /** Cópia usada apenas para o loop: fora do fluxo de leitura e de tabulação. */
   clone: boolean;
 }) {
-  const cartao = <CartaoParceiro parceiro={parceiro} />;
-
   return (
     <div className="shrink-0" aria-hidden={clone || undefined}>
-      {parceiro.url ? (
-        <a
-          href={parceiro.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={parceiro.name}
-          tabIndex={clone ? -1 : 0}
-          className="block rounded-2xl"
-        >
-          {cartao}
-        </a>
-      ) : (
-        cartao
-      )}
+      <CartaoParceiro parceiro={parceiro} />
     </div>
   );
 }

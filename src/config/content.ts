@@ -154,6 +154,18 @@ export interface Insurer {
    * preencher este campo depois e a imagem assume sozinha.
    */
   logo?: string | null;
+  /**
+   * Versão da marca para o TEMA ESCURO — a "reversa" monocromática branca que
+   * os manuais de marca preveem. Existe porque os arquivos das seguradoras são
+   * tinta escura sobre transparente: no tema escuro eles desapareceriam, e
+   * recolorir marca de terceiro não é opção.
+   *
+   * `scripts/logos.py` gera as duas versões de uma vez (`nome.png` e
+   * `nome-escuro.png`). Se este campo ficar vazio, o cartão daquela companhia
+   * mantém a placa clara também no tema escuro — funciona, mas destoa das
+   * outras, então vale gerar a reversa.
+   */
+  logoDark?: string | null;
   /** Site oficial (opcional) */
   url?: string;
 }
@@ -174,20 +186,20 @@ export interface Insurer {
  * ];
  */
 export const insurers: Insurer[] = [
-  { name: 'AVLA', logo: '/seguradoras/avla.png', url: 'https://www.avla.com.br' },
-  { name: 'AXA', logo: '/seguradoras/axa.png', url: 'https://www.axa.com.br' },
-  { name: 'Allianz', logo: '/seguradoras/allianz.png', url: 'https://www.allianz.com.br' },
-  { name: 'Azul Seguros', logo: '/seguradoras/azul-seguros.png', url: 'https://www.azulseguros.com.br' },
-  { name: 'Bradesco Seguros', logo: '/seguradoras/bradesco-seguros.png', url: 'https://www.bradescoseguros.com.br' },
-  { name: 'HDI Seguros', logo: '/seguradoras/hdi-seguros.png', url: 'https://www.hdiseguros.com.br' },
-  { name: 'Mapfre', logo: '/seguradoras/mapfre.png', url: 'https://www.mapfre.com.br' },
-  { name: 'MetLife', logo: '/seguradoras/metlife.png', url: 'https://www.metlife.com.br' },
-  { name: 'Porto', logo: '/seguradoras/porto.png', url: 'https://www.portoseguro.com.br' },
-  { name: 'Pottencial', logo: '/seguradoras/pottencial.png', url: 'https://www.pottencial.com.br' },
-  { name: 'Sancor Seguros', logo: '/seguradoras/sancor-seguros.png', url: 'https://www.sancorseguros.com.br' },
-  { name: 'SulAmérica', logo: '/seguradoras/sulamerica.png', url: 'https://www.sulamerica.com.br' },
-  { name: 'Tokio Marine', logo: '/seguradoras/tokio-marine.png', url: 'https://www.tokiomarine.com.br' },
-  { name: 'Zurich', logo: '/seguradoras/zurich.png', url: 'https://www.zurich.com.br' },
+  { name: 'AVLA', logo: '/seguradoras/avla.png', logoDark: '/seguradoras/avla-escuro.png', url: 'https://www.avla.com.br' },
+  { name: 'AXA', logo: '/seguradoras/axa.png', logoDark: '/seguradoras/axa-escuro.png', url: 'https://www.axa.com.br' },
+  { name: 'Allianz', logo: '/seguradoras/allianz.png', logoDark: '/seguradoras/allianz-escuro.png', url: 'https://www.allianz.com.br' },
+  { name: 'Azul Seguros', logo: '/seguradoras/azul-seguros.png', logoDark: '/seguradoras/azul-seguros-escuro.png', url: 'https://www.azulseguros.com.br' },
+  { name: 'Bradesco Seguros', logo: '/seguradoras/bradesco-seguros.png', logoDark: '/seguradoras/bradesco-seguros-escuro.png', url: 'https://www.bradescoseguros.com.br' },
+  { name: 'HDI Seguros', logo: '/seguradoras/hdi-seguros.png', logoDark: '/seguradoras/hdi-seguros-escuro.png', url: 'https://www.hdiseguros.com.br' },
+  { name: 'Mapfre', logo: '/seguradoras/mapfre.png', logoDark: '/seguradoras/mapfre-escuro.png', url: 'https://www.mapfre.com.br' },
+  { name: 'MetLife', logo: '/seguradoras/metlife.png', logoDark: '/seguradoras/metlife-escuro.png', url: 'https://www.metlife.com.br' },
+  { name: 'Porto', logo: '/seguradoras/porto.png', logoDark: '/seguradoras/porto-escuro.png', url: 'https://www.portoseguro.com.br' },
+  { name: 'Pottencial', logo: '/seguradoras/pottencial.png', logoDark: '/seguradoras/pottencial-escuro.png', url: 'https://www.pottencial.com.br' },
+  { name: 'Sancor Seguros', logo: '/seguradoras/sancor-seguros.png', logoDark: '/seguradoras/sancor-seguros-escuro.png', url: 'https://www.sancorseguros.com.br' },
+  { name: 'SulAmérica', logo: '/seguradoras/sulamerica.png', logoDark: '/seguradoras/sulamerica-escuro.png', url: 'https://www.sulamerica.com.br' },
+  { name: 'Tokio Marine', logo: '/seguradoras/tokio-marine.png', logoDark: '/seguradoras/tokio-marine-escuro.png', url: 'https://www.tokiomarine.com.br' },
+  { name: 'Zurich', logo: '/seguradoras/zurich.png', logoDark: '/seguradoras/zurich-escuro.png', url: 'https://www.zurich.com.br' },
   /* Faltando o arquivo utilizável:
      - Fairfax: o arquivo enviado é a versão CLARA (texto branco), feita para
        fundo escuro — sobre a placa branca do carrossel ela fica invisível.
@@ -195,7 +207,7 @@ export const insurers: Insurer[] = [
      - Seguros Unimed, Swiss Re e Yelum foram citados no envio mas os arquivos
        não chegaram.
   */
-  // { name: 'Fairfax', logo: '/seguradoras/fairfax.png', url: 'https://www.fairfax.com.br' },
+  // { name: 'Fairfax', logo: '/seguradoras/fairfax.png', logoDark: '/seguradoras/fairfax-escuro.png', url: 'https://www.fairfax.com.br' },
 ];
 
 /* -------------------------------------------------------------------------- */
@@ -294,12 +306,20 @@ export interface Post {
 
 /**
  * Estrutura pronta para receber conteúdo de um CMS ou do Supabase
- * (ver src/services/content.ts). Enquanto a lista estiver vazia, a seção
- * exibe um estado "em breve" em vez de artigos fictícios.
+ * (ver src/services/content.ts).
+ *
+ * Enquanto esta lista estiver vazia, a seção de artigos NÃO é renderizada —
+ * nada de "em breve" nem de cartão fictício. Quem ocupa o lugar dela na home é
+ * a seção de curiosidades (`src/config/curiosities.ts`), que é conteúdo próprio
+ * e não depende de publicação nova. Ao publicar o primeiro artigo aqui, a seção
+ * aparece automaticamente, acima do rodapé.
  */
 export const posts: Post[] = [];
 
-/** Categorias previstas para o blog — usadas nos filtros e no SEO. */
+/**
+ * Categorias previstas para o blog — usadas no SEO e como rótulo do cartão
+ * (`Post.category`) quando o artigo não tem imagem de capa.
+ */
 export const postCategories = [
   'Seguros',
   'Seguro Auto',

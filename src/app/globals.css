@@ -116,7 +116,12 @@
   --veil: 255 255 255;
   --veil-opacity: 0.86;
 
-  --header-h: 98px;
+  /* Altura da barra do cabeçalho, para quem precisar dela em CSS.
+     ⚠️ NÃO é o valor que a rolagem por âncora usa: AnchorScroll MEDE a barra
+     (`[data-header-bar]`) na hora do clique, justamente porque a altura muda
+     entre celular e desktop e ao rolar. Mexer só neste número não move a
+     rolagem — as alturas de verdade estão em Header.tsx. */
+  --header-h: 108px;
 
   /* ------------------------------------------------------------------------
      BRILHOS QUE ATRAVESSAM (microinterações)
@@ -352,6 +357,10 @@
   }
 
   /* Etiqueta de seção */
+  /* Etiqueta acima do título da seção. Só texto: o ícone de faísca que vinha
+     antes foi removido do site (ver SectionHeading.tsx). O `gap` fica porque
+     algumas etiquetas ainda levam um segundo elemento — um contador, por
+     exemplo —, e sem ícone ele simplesmente não tem efeito. */
   .eyebrow {
     display: inline-flex;
     align-items: center;

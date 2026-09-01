@@ -4,7 +4,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { gsap, useGSAP } from '@/lib/gsap';
 import { prefersReducedMotion } from '@/hooks/useReducedMotion';
 import { verseBand, verses } from '@/config/verses';
-import Icon from '@/components/icons';
 
 const CHAVE = 'fixseg:versiculos';
 
@@ -13,7 +12,7 @@ const CHAVE = 'fixseg:versiculos';
  * FAIXA DE VERSÍCULOS — fim de página
  * =============================================================================
  * Discreta, mas visível: uma faixa fina acima do rodapé, com um versículo por
- * vez, trocando sozinha.
+ * vez, trocando sozinha. Sem título, sem botão, sem chamada — só a passagem.
  *
  * -----------------------------------------------------------------------------
  * "ESCOLHA ALEATÓRIA, SEM NUNCA REPETIR" — como isso é resolvido
@@ -44,14 +43,24 @@ const CHAVE = 'fixseg:versiculos';
  * -----------------------------------------------------------------------------
  *  · `aria-live="off"`: conteúdo que troca sozinho não deve interromper quem
  *    usa leitor de tela a cada 14 segundos.
- *  · a rotação PARA no hover e no foco de teclado, e existe um botão explícito
- *    para avançar — é o que a WCAG 2.2.2 exige de conteúdo em movimento.
+ *  · a rotação PARA no hover e no foco de teclado. A WCAG 2.2.2 pede um jeito
+ *    de pausar conteúdo em movimento automático; a pausa no ponteiro e no foco
+ *    cumpre isso sem colocar um controle na tela. O cliente pediu justamente
+ *    que não houvesse botão — a troca é parte do site, não uma tarefa do
+ *    visitante — e a faixa é conteúdo decorativo, não essencial: quem não
+ *    interage não perde nada.
  *  · com `prefers-reduced-motion`, a faixa mostra um versículo e não troca mais.
  * =============================================================================
  */
 export function VerseBand() {
   const total = verses.length;
   const [indice, setIndice] = useState(0);
+  /* O MESMO índice, também em ref. O intervalo de rotação chama `proximo`, que
+     precisa saber qual versículo está na tela; lendo isso do estado capturado
+     pela closure, duas trocas que se sobrepõem (a animação de troca dura ~0,8s)
+     leriam o mesmo valor e o "não repetir" podia falhar na emenda. O ref está
+     sempre atual. */
+  const indiceRef = useRef(0);
   const saco = useRef<number[]>([]);
   const pausado = useRef(false);
   const texto = useRef<HTMLDivElement>(null);
@@ -85,13 +94,20 @@ export function VerseBand() {
 
   const proximo = useCallback(() => {
     if (total < 2) return;
-    if (!saco.current.length) saco.current = embaralhar(indice);
-    const escolhido = saco.current.shift() as number;
-    /* se o sorteio devolveu justamente o que já está na tela, pega o seguinte */
-    const definitivo =
-      escolhido === indice && saco.current.length
-        ? (saco.current.shift() as number)
-        : escolhido;
+
+    /* O saco, na forma mais simples que é PROVADAMENTE correta:
+       saco vazio → embaralha tudo garantindo que o primeiro não seja o que está
+       na tela; então tira o próximo da frente. Nada é descartado e nenhuma
+       rodada é desperdiçada, então cada ciclo entrega todos os versículos.
+
+       A versão anterior tinha um ramo a mais: se o item sorteado fosse igual ao
+       da tela, pegava o seguinte. Esse ramo consumia uma rodada em silêncio e
+       era exatamente por onde escapava um versículo por ciclo (medido: 17 de 18
+       antes de reembaralhar). Com a garantia no embaralhamento, o caso que ele
+       tratava não pode acontecer, e o ramo deixou de existir. */
+    if (!saco.current.length) saco.current = embaralhar(indiceRef.current);
+    const definitivo = saco.current.shift() as number;
+    indiceRef.current = definitivo;
 
     const trocar = () => {
       setIndice(definitivo);
@@ -112,7 +128,7 @@ export function VerseBand() {
         { autoAlpha: 0, y: 8 },
         { autoAlpha: 1, y: 0, duration: 0.45, ease: 'brand' },
       );
-  }, [embaralhar, gravar, indice, reduced, total]);
+  }, [embaralhar, gravar, reduced, total]);
 
   /* ------------------------------------------- retoma de onde parou */
   useEffect(() => {
@@ -140,6 +156,7 @@ export function VerseBand() {
        do servidor — assim duas visitas seguidas não abrem com o mesmo texto. */
     if (total > 1) {
       const primeiro = saco.current.shift() as number;
+      indiceRef.current = primeiro;
       setIndice(primeiro);
       gravar(saco.current, primeiro);
     }
@@ -202,28 +219,32 @@ export function VerseBand() {
         className="pointer-events-none absolute inset-x-0 top-0 h-px bg-brand-gradient opacity-30"
       />
 
-      <div className="shell flex flex-col items-center gap-3 py-7 text-center md:flex-row md:justify-center md:gap-6 md:py-6">
-        {verseBand.chamada && (
-          <p className="flex shrink-0 items-center gap-2 text-[.6875rem] font-semibold uppercase tracking-[0.2em] text-fg-4">
-            <Icon name="spark" size={12} className="text-accent-ink" />
-            {verseBand.chamada}
-          </p>
-        )}
-
+      <div className="shell flex justify-center py-7 text-center md:py-8">
         <div
           ref={texto}
           aria-live="off"
-          className="min-w-0 max-w-[62ch] md:border-l md:border-hair md:pl-6"
+          className="min-w-0 max-w-[64ch]"
         >
-          <p className="text-balance font-display text-[.9375rem] italic leading-relaxed text-fg-2 md:text-[1rem]">
+          {/* Sem ícone. A faísca que abria a faixa saiu junto com as das
+              etiquetas de seção — o cliente identificou aquela estrelinha como
+              marca de página gerada por IA. Um fio curto na cor da marca faz o
+              mesmo papel de abertura, sem símbolo. */}
+          <span
+            aria-hidden="true"
+            className="mx-auto mb-4 block h-px w-10 bg-brand-gradient opacity-60"
+          />
+          <p className="text-balance font-display text-[.9375rem] italic leading-relaxed text-fg-2 md:text-[1.0625rem]">
             “{atual.texto}”
           </p>
-          <p className="mt-1.5 text-[.75rem] uppercase tracking-[0.16em] text-fg-4">
+          {/* Só a referência. O crédito da tradução ("Almeida, domínio público")
+              saiu da tela por pedido do cliente — a informação continua
+              registrada no comentário de `src/config/verses.ts`, que é onde ela
+              importa: é lá que se decide trocar de tradução, e trocar exige
+              autorização da editora quando a versão for protegida. */}
+          <p className="mt-1.5 text-[.75rem] uppercase tracking-[0.16em]">
             <span data-verse-ref className="font-semibold text-accent-ink">
               {atual.referencia}
             </span>
-            <span className="mx-1.5 opacity-50">·</span>
-            {verseBand.traducao}
           </p>
         </div>
 
@@ -234,20 +255,6 @@ export function VerseBand() {
             diferentes — React #418. Quem está em modo sem movimento não vê a
             faixa trocar sozinha, mas continua podendo avançar no botão, o que
             é melhor do que esconder o controle. */}
-        {total > 1 && (
-          <button
-            type="button"
-            onClick={proximo}
-            aria-label="Ver outro versículo"
-            className="group/v grid h-9 w-9 shrink-0 place-items-center rounded-full border border-hair text-fg-4 transition-all duration-300 ease-brand hover:border-brand-2/50 hover:text-accent-ink focus-visible:border-brand-2/50"
-          >
-            <Icon
-              name="arrow-right"
-              size={14}
-              className="transition-transform duration-300 ease-brand group-hover/v:translate-x-0.5"
-            />
-          </button>
-        )}
       </div>
     </section>
   );

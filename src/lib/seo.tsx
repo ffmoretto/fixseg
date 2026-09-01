@@ -72,7 +72,10 @@ export function baseMetadata(): Metadata {
       },
     },
     category: 'insurance',
-    formatDetection: { telephone: true, address: true, email: true },
+    /* `telephone: false` porque o site não publica número nenhum. Com a
+       detecção ligada, o iOS transformava sequências parecidas com telefone —
+       CNPJ, CEP, registro SUSEP — em links de ligação. */
+    formatDetection: { telephone: false, address: true, email: true },
   };
 }
 
@@ -105,13 +108,19 @@ export function organizationSchema() {
     knowsLanguage: 'pt-BR',
   };
 
-  /* Telefone em formato internacional: é o que o Google espera em `telephone`.
-     O número exibido na página continua no formato brasileiro. */
-  if (site.contact.phoneRaw) {
-    schema.telephone = `+55${site.contact.phoneRaw.replace(/\D/g, '').replace(/^55/, '')}`;
-  } else if (site.contact.phone) {
-    schema.telephone = site.contact.phone;
-  }
+  /* `telephone` NÃO é emitido, de propósito.
+     O número da corretora não aparece escrito em nenhum lugar do site: o contato
+     por voz acontece pelo WhatsApp, e o número existe apenas como destino do
+     link daquele botão. Publicá-lo em structured data faria o Google exibir um
+     botão de ligar — ou seja, reintroduziria pela porta de trás o canal que foi
+     retirado da página. Para voltar a emitir, basta descomentar:
+
+       if (site.contact.phoneRaw) {
+         schema.telephone = `+55${site.contact.phoneRaw.replace(/\D/g, '')}`;
+       }
+
+     Consequência conhecida: a ficha do negócio no Google perde o campo de
+     telefone. O endereço, o CNPJ e o registro SUSEP continuam lá. */
   if (site.contact.email) schema.email = site.contact.email;
   if (site.cnpj) schema.taxID = site.cnpj;
   /* Registro na SUSEP: é a credencial que identifica a corretora. */

@@ -176,7 +176,6 @@ export default function DiagnosticoClient() {
         </nav>
 
         <span className="eyebrow">
-          <Icon name="spark" size={13} />
           Página interna
         </span>
         <h1 className="mt-5 text-display-md font-semibold text-fg">

@@ -35,8 +35,8 @@ legalName:     'FIXSEG Corretora de Seguros'          // títulos, Open Graph, S
 corporateName: 'FIXSEG CORRETORA DE SEGUROS LTDA'     // razão social: rodapé e páginas legais
 contact: {
   whatsapp: '5545999550676',                    // só dígitos, com 55 na frente
-  phone:    '(45) 99955-0676',                  // como aparece na tela
-  phoneRaw: '45999550676',                      // usado no link tel:
+  phone:    '(45) 99955-0676',                  // NÃO é exibido — ver o aviso abaixo
+  phoneRaw: '45999550676',                      // NÃO é exibido — ver o aviso abaixo
   email:    'contato@fixsegcorretora.com.br',
 },
 address: {
@@ -58,15 +58,55 @@ ambiente `NEXT_PUBLIC_WHATSAPP_NUMBER`, `NEXT_PUBLIC_PHONE` e `NEXT_PUBLIC_EMAIL
 continuam tendo prioridade, o que permite apontar uma publicação de teste para outro
 número sem tocar no código.
 
-Como o mesmo número atende WhatsApp e ligação, os dois canais aparecem na seção de
-contato com ações diferentes: o cartão do WhatsApp abre a conversa com a mensagem
-pré-preenchida, o cartão de telefone disca. O número em si aparece uma vez em cada
-região da página, não duas.
+### 📞 O número de telefone não é exibido em lugar nenhum
+
+Por decisão da corretora, `(45) 99955-0676` **não aparece escrito em nenhuma tela do
+site**. O contato por voz acontece pelo WhatsApp: o número existe apenas como *destino do
+link* dos botões de WhatsApp — `href="https://wa.me/5545999550676?text=…"`. Foram
+retirados o cartão de telefone da seção de cotação, a linha de telefone do rodapé e
+qualquer link `tel:`.
+
+O corte vale também para o que os robôs leem: `telephone` **não é emitido** no
+Schema.org (`src/lib/seo.tsx`). Publicá-lo lá faria o Google exibir um botão de ligar na
+ficha do negócio — ou seja, devolveria pela porta de trás o canal que foi retirado da
+página. E `formatDetection: { telephone: false }` impede o iOS de transformar CNPJ, CEP e
+registro SUSEP em links de ligação, o que acontecia por parecerem sequências de telefone.
+
+Os campos `phone` e `phoneRaw` continuam preenchidos em `site.ts` de propósito: são o
+registro do dado e o que a função `telUrl()` de `src/lib/whatsapp.ts` usaria. **Para voltar
+a exibir o telefone** basta reintroduzir o bloco onde ele fizer falta e descomentar o
+trecho documentado em `organizationSchema()` — o comentário no arquivo traz o snippet
+pronto e a consequência de cada escolha.
 
 O endereço ativa automaticamente o **SEO local**: as páginas passam a incluir "em
 Cascavel" no Open Graph e nas descrições dos produtos, a palavra-chave "corretora de
 seguros Cascavel" entra na lista, e o `PostalAddress` do Schema.org é emitido junto do
 CNPJ (`taxID`) e do registro SUSEP (`identifier`).
+
+### O rodapé é o único lugar com dados de contato
+
+Endereço, e-mail, horário, CNPJ e SUSEP aparecem **uma vez só na página**, no rodapé. A
+seção "Contato" ficou com o convite e o formulário; os cartões que repetiam os mesmos
+dados foram removidos justamente para não haver duas versões da mesma informação para
+manter em dia.
+
+Duas funções em `site.ts` servem esse bloco estreito:
+
+- `formattedAddress()` — tudo em uma linha, separado por "·". Serve para faixas largas.
+- `addressLines()` — o endereço em **três linhas curtas** (logradouro / bairro · cidade-UF
+  / CEP). É o que o rodapé usa, com `whitespace-nowrap` em cada linha. Numa string única,
+  a coluna estreita quebrava em lugares ruins — "741 —" numa linha e "Sala 02" na outra,
+  partindo o número da sala do endereço.
+
+O e-mail tem 30 caracteres e antes usava `break-all`, que o partia no meio da palavra
+("…com.b / r"). Agora a coluna de contato é mais larga (`lg:grid-cols-[1.2fr_.82fr_.82fr_1.3fr]`)
+e o endereço sai em `whitespace-nowrap` com corpo de 15px: **uma linha inteira, sem
+quebra**. Medido no navegador nos dois temas: o item do e-mail tem 40px de altura (uma
+linha) e o do endereço 103px (as três linhas, nenhuma quebrada).
+
+Se você trocar o e-mail por um mais longo, ou acrescentar complemento ao endereço, confira
+esse bloco: `whitespace-nowrap` não quebra — ele transborda. O ajuste é subir o peso da
+coluna no `grid-cols` do rodapé, ou quebrar o dado em mais uma linha em `addressLines()`.
 
 ### Ainda em branco
 
@@ -95,6 +135,7 @@ site que não veio de uma fonte. Para esconder o bloco por completo, deixe a lis
 | `src/config/navigation.ts` | menu do header, links do footer, links legais |
 | `src/config/insurances.ts` | os 11 produtos: nome, descrição, coberturas, **campos do formulário de cotação** e palavras-chave de SEO |
 | `src/config/content.ts` | diferenciais, etapas do "como funciona", textos institucionais, **indicadores numéricos**, **parceiros (seguradoras)**, **depoimentos diretos**, FAQ e blog |
+| `src/config/curiosities.ts` | as **50 curiosidades sobre seguros** do carrossel: 5 por produto, cada uma com fonte e ano |
 | `src/config/story.ts` | roteiro da narrativa animada em scroll (capítulos, textos, produtos relacionados) |
 
 ### Itens que ficaram intencionalmente vazios
@@ -105,7 +146,7 @@ seções correspondentes **não aparecem** até serem preenchidas:
 1. **Indicadores** (`content.ts` → `stats`): clientes atendidos, anos de experiência,
    seguros contratados, seguradoras parceiras. Troque `value: null` pelo número real e o
    card entra em cena com contagem animada.
-2. **Parceiros da FIXSEG** (`content.ts` → `insurers`): uma entrada `{ name, logo?, url? }`
+2. **Parceiros da FIXSEG** (`content.ts` → `insurers`): uma entrada `{ name, logo? }`
    por seguradora. **O logo é opcional** — sem ele a companhia aparece como cartão
    tipográfico, com o nome na fonte da marca, e a imagem assume sozinha quando o arquivo
    for colocado em `public/seguradoras/` e apontado em `logo`. Com a lista vazia, a seção
@@ -172,6 +213,19 @@ branco ao carregar no escuro. A escolha fica em `localStorage`
 (`fixseg:theme`) e pode ser forçada por URL para testes: `?tema=claro`,
 `?tema=escuro`, `?tema=auto`.
 
+### Nenhum símbolo de "site gerado por IA"
+
+Havia uma **faísca de quatro pontas (✦)** antes do texto em todas as etiquetas de seção —
+nove ocorrências na home, mais a abertura da faixa de versículos e os blocos sem imagem.
+Foi removida a pedido do cliente: repetida daquele jeito, a estrelinha tinha virado
+assinatura visual de página gerada por IA e dava ao site cara de modelo pronto.
+
+A remoção foi até o fim, não só nos componentes: **o ícone `spark` saiu do registro** em
+`src/components/icons/index.tsx`, para que ninguém volte a usá-lo sem perceber. O `star`
+(estrela cheia, cinco pontas) continua — é o das notas de avaliação do Google, que é outra
+coisa. Onde a faísca abria um bloco, entrou um fio curto no degradê da marca; nas etiquetas,
+o destaque em cor no título já dá o peso visual.
+
 ### Tipografia
 
 Sora nos títulos, Inter no texto — auto-hospedadas via Fontsource. Não há requisição ao
@@ -194,7 +248,41 @@ largo ou mais estreito que o nome, que foi exatamente o defeito corrigido.
 `src/components/brand/Logo.tsx` é o que se usa nas páginas: `height` é a altura **total**
 da peça, e a largura acompanha (proporção ≈ 2,58 × a altura). As letras usam
 `currentColor`, então a marca inverte junto com o tema; o check e o fio mantêm os azuis
-originais. No cabeçalho ela tem 48px e reduz para 40px quando a página rola.
+originais.
+
+**No cabeçalho:** 68px no desktop (56px depois de rolar) e 56px no celular (46px rolado).
+A barra acompanha — `h-[120px] md:` no topo, `h-[92px] md:` rolado, e 108/84 no celular.
+
+Três coisas se aprendem ao mexer nesse tamanho, e vale registrá-las:
+
+**1. Quem manda no tamanho mínimo é a assinatura, não o nome.** "CORRETORA DE SEGUROS" tem
+8,5 unidades de altura num lockup de 101 — 8% da peça. A 58px de logo isso dava menos de
+5px de altura de letra: a linha existia e não se lia.
+
+**2. A assinatura foi ampliada glifo por glifo, não como bloco.** A linha da assinatura tem
+praticamente a mesma largura do fio degradê acima dela (256,6 contra 257,8 unidades).
+Escalar o bloco em 22% jogaria as letras 28 unidades para fora do fio de cada lado.
+A solução está em `ASSINATURA_ESCALA` (`LogoLockup.tsx`): **cada letra cresce em torno do
+seu próprio centro**, então a letra aumenta e a linha não se alarga — o que diminui é o
+espacejamento, que no original é largo justamente para a assinatura alcançar a largura do
+nome. Medido no navegador com `getBBox`: a linha vai de x 60,6…317,3 para 59,98…317,55, ou
+0,35 unidade além da ponta do fio — 0,2px numa logo de 68px. **Para reverter, ponha 1
+nessa constante**; todos os `transform` somem de uma vez.
+
+**3. A logo é larga, e no celular isso é o limite.** A largura é 2,58 × a altura, então
+68px de altura são 175px de largura. Num aparelho de 320px não sobrava espaço para o
+seletor de tema e o botão do menu. Por isso `Logo` aceita **`heightSm`** — a altura abaixo
+de 768px — e faz a troca em **CSS** (duas variáveis, `h-[var(--logo-h)]` e
+`md:h-[var(--logo-h-md)]`), nunca em JavaScript: ler a largura da janela no render
+divergiria entre servidor e navegador. A altura não pode voltar a ser `style.height`, senão
+o estilo em linha vence a classe `md:` e a versão de desktop nunca se aplica.
+
+**A rolagem por âncora não usa mais número fixo.** `AnchorScroll` **mede**
+`[data-header-bar]` na hora do clique e desconta a altura real mais 14px de folga. Antes
+era a constante `HEADER_OFFSET = 96` ("a barra rolada de 76px mais folga"), que envelheceu
+duas vezes — a barra cresceu e passou a ter altura diferente no celular e no desktop. O
+token `--header-h` em `globals.css` continua declarado para uso em CSS, mas **não** é o que
+a rolagem lê: mexer só nele não move nada.
 
 Regra prática: **não recomponha as partes da logo em CSS.** Use o componente.
 
@@ -436,6 +524,55 @@ desmontada em seguida.
 - O estado inicial das animações de entrada vem do CSS e só se aplica quando o JavaScript
   está ativo (classe `js-anim`): sem JS, nada fica invisível, e não há "flash" de conteúdo.
 
+### Animação de entrada + conteúdo filtrado: a armadilha resolvida
+
+Vale ler antes de criar qualquer grade com abas, porque o defeito é silencioso e some
+com `prefers-reduced-motion` ligado — ou seja, não aparece em teste de acessibilidade.
+
+Na seção "Encontre a proteção ideal para você" as abas **Todos / Para você e sua família /
+Para sua empresa** trocam os cartões. Cada cartão entra com `[data-reveal-item]`, cujo
+estado inicial no CSS é `opacity: 0`; quem devolve a opacidade é o ScrollTrigger de
+entrada, que marca a classe `.is-in`.
+
+O que acontecia: ao trocar de aba, o React remonta os cartões. Os novos elementos nascem
+com o `opacity: 0` do CSS e **sem** `.is-in`, e o ScrollTrigger daquele lote já tinha
+disparado — nenhum novo gatilho existia para eles. Resultado visível para o cliente:
+"Seguro de Transportes, Frota, Empresarial, Responsabilidade Civil e Garantia desaparecem
+ao clicar em *Para sua empresa*". Os cartões estavam ali, ocupando espaço, invisíveis.
+
+A correção em `src/components/sections/Insurances.tsx` é reanimar o lote a cada mudança de
+filtro, com `dependencies: [filter]` no `useGSAP`, e uma guarda para não atropelar a
+entrada por scroll na primeira renderização:
+
+```tsx
+const jaFiltrou = useRef(false);
+
+useGSAP(() => {
+  if (reduced) return;
+  const el = gridRef.current; if (!el) return;
+  /* Primeira passagem = carga da página: quem anima é o ScrollTrigger de
+     entrada. Só a partir da SEGUNDA (= o usuário trocou de aba) este efeito
+     assume. Sem esta guarda, os cartões animavam duas vezes ao carregar. */
+  if (!jaFiltrou.current) { jaFiltrou.current = true; return; }
+
+  const itens = Array.from(el.querySelectorAll<HTMLElement>('[data-reveal-item]'));
+  if (!itens.length) return;
+
+  gsap.fromTo(itens, { opacity: 0, y: 18, scale: 0.98 }, {
+    opacity: 1, y: 0, scale: 1, duration: 0.5, stagger: 0.035, ease: 'brand',
+    clearProps: 'transform,opacity',
+    /* `.is-in` é o que mantém o cartão visível DEPOIS que o GSAP limpa as
+       propriedades inline. Sem isso, o `opacity: 0` do CSS volta a valer. */
+    onStart: () => itens.forEach((n) => n.classList.add('is-in')),
+  });
+}, { dependencies: [filter] });
+```
+
+**Regra prática:** todo elemento com `[data-reveal-item]` que possa ser remontado por
+estado do React precisa receber `.is-in` no momento em que entra — ou ficará invisível
+para sempre. Conferido no navegador: `Todos` 12 cartões / 0 invisíveis, `Para você e sua
+família` 7 / 0, `Para sua empresa` 11 / 0, e um ciclo de seis trocas seguidas sem falha.
+
 ### Navegação por âncoras
 
 `src/components/layout/AnchorScroll.tsx`. A rolagem nativa por fragmento conflita com o
@@ -544,6 +681,87 @@ avaliação real vinda do Google (`reviewsSchema()` em `src/lib/seo.tsx`, um nó
 mesmo `@id` da organização). Nota inventada em structured data é violação das
 diretrizes do Google.
 
+### Curiosidades sobre seguros (seção "Informação também é proteção")
+
+Esta seção **não busca nada na internet**. O conteúdo é da corretora, está em
+`src/config/curiosities.ts` e é renderizado por `src/components/sections/Curiosities.tsx`.
+
+Ela substituiu uma integração com o feed de notícias do CQCS, que foi retirada. Vale
+registrar por quê, para que ninguém a reintroduza sem pensar:
+
+1. **cada cartão era um link de saída.** O visitante lia meia notícia e ia terminar de ler
+   no site de outra empresa — que também vende seguro;
+2. **o conteúdo dependia de um servidor de terceiro**, que pode mudar de estrutura, sair do
+   ar ou recusar as requisições. E recusava: o portal respondia 403;
+3. **a seleção era por filtro de palavras**, e filtro sempre deixa passar (ou barra) alguma
+   coisa. Nenhum ajuste de lista resolve isso de vez.
+
+Os arquivos `src/config/news.ts`, `src/services/news.ts` e
+`scripts/verificar-noticias.mjs` foram **apagados**, junto das variáveis `NEWS_*` do
+`.env.example` e da derivação de hosts de imagem do `next.config.mjs`. O histórico do git
+guarda o adaptador, o parser de RSS e o filtro, se um dia fizerem falta.
+
+#### O conteúdo
+
+**50 curiosidades, 5 para cada um dos 10 produtos** que a corretora comercializa. Cada uma
+tem:
+
+| Campo | Papel |
+| --- | --- |
+| `slug` | o produto, casando com `src/config/insurances.ts` — é o que monta os filtros |
+| `titulo` | a manchete, 4 a 9 palavras |
+| `texto` | 2 a 4 frases: o fato e por que ele importa para quem tem o bem |
+| `destaque` | `{ valor, rotulo }` — o número exibido grande. `null` quando o item não tem número |
+| `fonte` | nome da fonte + ano. **Aparece no cartão** |
+
+**A regra que governa esse arquivo: todo número é real, tem ano e tem fonte.** A pesquisa
+foi feita item por item em fontes primárias brasileiras — CNseg, FenSeg, FenaPrevi, SUSEP,
+NTC&Logística, CNT, Sinesp, Fórum Brasileiro de Segurança Pública, INPE, STJ e a própria
+legislação (Código Civil, Código Penal, Lei 14.133/2021, Lei 14.599/2023, Lei 15.040/2024,
+CPC, Lei das S.A.). **O endereço de cada fonte está no comentário acima do item**, para
+conferência.
+
+Quando o assunto é interessante mas não tem número confiável, o item entra **sem número** e
+conta a regra, o prazo ou a cobertura — o cartão mostra "Você sabia?" no lugar do dado.
+Isso é deliberado: estatística chutada em site de corretora é pior do que curiosidade
+nenhuma.
+
+**Dado envelhece.** Números de mercado (arrecadação, roubos no ano, % de bens segurados)
+merecem revisão anual. O ano aparece na tela junto da fonte, então um dado velho fica
+visível para o visitante — honesto, mas não bom.
+
+#### O carrossel
+
+- **Abas por produto**, mais "Todos os temas" (50 cartões). A aba mostra o nome do produto
+  sem a palavra "Seguro" na frente, que a seção já dá o contexto.
+- **Avanço automático** a cada 9 segundos (`curiosidadesConfig.intervalo`), que **para** no
+  ponteiro, no foco de teclado e quando a aba do navegador sai de vista. Botões de anterior
+  e próximo, pontos até 8 itens e contador (`01 / 50`) acima disso — trinta pontinhos numa
+  linha não informam posição, viram textura.
+- **Circular**: passar do último volta ao primeiro.
+- **Nenhum link.** Verificado no navegador: `0` elementos `a[href]` dentro da seção.
+
+**Por que um scroller nativo e não `transform`:** o carrossel é um contêiner com
+`overflow-x` e `scroll-snap`, e avançar é chamar `scrollTo` no elemento. Não há cálculo de
+translate, nem largura medida à mão, nem estado de posição para dessincronizar — e vêm de
+graça o arrasto com o dedo, a inércia do sistema, a roda do mouse na horizontal e a rolagem
+por teclado. A posição corrente é **lida de volta do scroll**, nunca assumida, porque o
+visitante pode arrastar o cartão sem passar pelos botões.
+
+**Acessibilidade:** `aria-roledescription="carrossel"` na região e "N de M" no rótulo de
+cada cartão; setas do teclado navegam quando o carrossel tem foco; a pausa no ponteiro e no
+foco cumpre a WCAG 2.2.2; com `prefers-reduced-motion` não há avanço automático nem rolagem
+animada.
+
+**Para desligar a seção:** `curiosidadesConfig.ativo = false`.
+
+### Artigos próprios (a seção de conteúdo da FIXSEG)
+
+`src/components/sections/Blog.tsx` continua existindo, agora **só** com os artigos da
+corretora (`posts` em `src/config/content.ts`). Com a lista vazia — o estado de uma
+publicação nova — a seção não é renderizada. Publicado o primeiro artigo, ela aparece
+sozinha, com o título "Escrito pela FIXSEG", logo abaixo das curiosidades.
+
 ### Integrações preparadas, não ativadas
 
 Supabase, CRM, API de cotação, consulta de CNPJ, Google Analytics, Google Tag Manager e
@@ -593,10 +811,43 @@ Todos saem na MESMA tela de 280×88 (o dobro da caixa de exibição), o que
 dispensa ajuste por logo no componente: um único `object-contain` entrega todos
 no mesmo tamanho óptico.
 
-**A placa branca.** Os arquivos das seguradoras são tinta escura sobre
-transparente — é assim que cada companhia distribui a própria marca. Sobre fundo
-escuro eles desapareceriam, e recolorir marca de terceiro não é uma opção. Por
-isso o cartão do carrossel tem placa branca nos DOIS temas (`--logo-plate`).
+### Os logos não são links
+
+Cada logo já foi um `<a target="_blank">` para o site da seguradora. **Saiu**: a faixa
+existe para mostrar com quem a corretora trabalha, e o caminho de saída menos desejado num
+site de corretora é justamente o que leva a quem também vende seguro. O campo `url`
+continua em `content.ts` → `insurers` como registro do dado; nada no site o usa.
+
+### As duas versões de cada marca
+
+Os arquivos das seguradoras são tinta escura sobre transparente — é assim que
+cada companhia distribui a própria marca. Sobre fundo escuro eles
+desapareceriam, e recolorir marca de terceiro não é uma opção. A saída são
+**duas versões por companhia**, geradas pelo mesmo script:
+
+| Tema | Arquivo | Cartão |
+| --- | --- | --- |
+| claro | `nome.png` | placa branca (`--logo-plate`), marca na cor original |
+| escuro | `nome-escuro.png` | vidro escuro, marca em **reversa monocromática branca** |
+
+A reversa é o tratamento que os próprios manuais de marca preveem para fundo
+escuro. Ela é montada em dois passos, e a ordem importa: primeiro o branco vira
+transparente — o que resolve os arquivos com fundo branco chapado e, de quebra,
+transforma o branco INTERNO da marca em furo, então o "Z" da Zurich e as barras
+da Allianz continuam aparecendo, agora como o fundo da página passando por
+dentro; depois o que sobrou é pintado de branco preservando o alfa
+(`-colorize`), o que evita halo cinza nas bordas antisserrilhadas. A cor da
+marca se perde no tema escuro: é o preço conhecido de uma reversa.
+
+**Uma exceção**: a AXA fica em cor nos dois temas (`modo = 'cor'` no script). O
+logo dela é um quadrado azul-marinho com letras brancas, que já nasce para fundo
+escuro; virá-lo em silhueta branca produziria um quadrado branco sem as letras.
+
+As duas versões ficam no DOM e a troca é por CSS (`dark:`), nunca por estado do
+React — o tema é resolvido antes da primeira pintura, e decidir isso em
+JavaScript causaria divergência de hidratação. A versão escondida não é baixada
+(`display:none` + `loading="lazy"`), e a visível é a única com `alt` ativo na
+árvore de acessibilidade.
 
 ### A faixa de versículos
 
@@ -608,6 +859,11 @@ acima do rodapé, em todas as páginas, com um versículo por vez.
   lista inteira (Fisher-Yates) e percorre do começo ao fim; só quando o último
   sai é que um novo embaralhamento acontece, e nesse novo garante-se que o
   primeiro não seja igual ao último exibido, para não repetir na emenda.
+  A implementação é deliberadamente mínima: *saco vazio → embaralha com
+  garantia; senão, tira o da frente*. Uma versão anterior tinha um ramo a mais
+  ("se sorteou o que já está na tela, pega o seguinte") que consumia uma rodada
+  em silêncio — medido, entregava 17 de 18 antes de reembaralhar. Com a garantia
+  no embaralhamento aquele caso não pode ocorrer, e o ramo saiu.
 - O saco fica no `localStorage`, então quem volta continua de onde parou. Se o
   navegador bloquear o armazenamento, o componente sorteia na memória.
 - **Hidratação**: o sorteio não pode acontecer no render (`Math.random()` divide
@@ -615,11 +871,22 @@ acima do rodapé, em todas as páginas, com um versículo por vez.
   embaralhamento começa depois da montagem. Pela mesma razão, o botão "ver outro
   versículo" é **sempre** renderizado: condicioná-lo a `prefersReducedMotion()`
   no JSX quebrava a hidratação (React #418), porque no servidor a preferência
-  ainda é desconhecida.
+  ainda é desconhecida. *(O botão foi depois removido a pedido do cliente; a
+  armadilha fica registrada porque vale para qualquer elemento condicionado a uma
+  preferência do navegador.)*
+- **Sem título, sem botão, sem chamada** — só a passagem e a referência. A
+  rotação é automática e faz parte do site; o visitante não tem nada a operar.
+- **O crédito da tradução saiu da tela.** A linha "Almeida, domínio público"
+  aparecia sob a referência e foi retirada a pedido do cliente: sob a faixa
+  ficam agora apenas a passagem e o livro/capítulo/versículo. A informação
+  **continua registrada** no comentário de `src/config/verses.ts` e no
+  `verseBand.traducao`, que é onde ela importa — é ali que se decide trocar de
+  tradução, e é a decisão que exige licença. Para exibir de novo, basta imprimir
+  `verseBand.traducao` ao lado da referência em `VerseBand.tsx`.
 - **Acessibilidade**: `aria-live="off"` (texto que troca sozinho não deve
-  interromper leitor de tela a cada 14s), a rotação para no hover e no foco, e o
-  botão dá controle explícito — é o que a WCAG 2.2.2 exige de conteúdo em
-  movimento. Com `prefers-reduced-motion`, a faixa mostra um versículo e não
+  interromper leitor de tela a cada 14s) e a rotação para no hover e no foco, que
+  é o mecanismo de pausa que a WCAG 2.2.2 pede para conteúdo em movimento
+  automático. Com `prefers-reduced-motion`, a faixa mostra um versículo e não
   troca mais.
 - **Tradução**: João Ferreira de Almeida, edição em **domínio público**. Escolha
   deliberada: ARA, ARC, NVI e NAA são obras protegidas e exigiriam licença da
@@ -753,8 +1020,38 @@ O projeto foi testado com navegador automatizado antes da entrega:
   capítulos cabem na área útil com folga em todas elas (`story-fit.mjs`).
 - **Calculadora de bônus:** os oito casos conhecidos da regra FENASEG conferidos por
   script, mais o preenchimento do formulário no navegador e a leitura do resultado.
+- **Carrossel de curiosidades:** as 11 abas conferidas uma a uma no navegador (5 cartões
+  cada, produto correto no primeiro cartão, pontos na aba de produto e contador `01 / 50`
+  em "Todos"), avanço e retorno pelos botões, navegação pelas setas do teclado, avanço
+  automático medido em 11s, **pausa confirmada com o ponteiro sobre o carrossel** e retomada
+  ao sair. **`0` links dentro da seção** — nenhum caminho de saída do site. Nos dois temas,
+  a 1440px e a 390px, sem erro de console e sem transbordamento horizontal.
 - **Seção de contato:** os dados de contato aparecem em UM só lugar da página (o rodapé).
   A seção de contato ficou com o convite e o formulário, centrados.
+- **Ausência do telefone:** varredura no HTML entregue de `/`, `/cotacao`, `/seguros`,
+  `/calculadora-bonus` e `/politica-de-privacidade` — o número formatado não aparece em
+  nenhuma delas, e **toda** ocorrência dos dígitos está dentro de um
+  `href="https://wa.me/…"` (7 na home, 3 em cada outra página). A verificação de
+  "ocorrências fora de contexto wa.me" voltou vazia. `telephone` não sai no JSON-LD.
+- **Abas de filtro dos seguros:** contagem de cartões e de cartões invisíveis em cada aba
+  (`Todos` 12/0, `Para você e sua família` 7/0, `Para sua empresa` 11/0) e um ciclo de
+  seis trocas seguidas (empresa → pessoa → empresa → todos → pessoa → todos), todas sem
+  nenhum cartão invisível.
+- **Rodapé, linha por linha:** medido nos dois temas — item do e-mail com 40px (uma linha)
+  e do endereço com 103px (três linhas, nenhuma quebrada no meio de uma palavra); nenhum
+  erro de console.
+- **Cabeçalho ampliado:** logo de 68px no topo e 56px rolado no desktop, 56/46 no celular,
+  capturada nos dois temas e nos dois estados de rolagem em 1440px, 360px e 320px. A
+  assinatura "Corretora de Seguros" está legível em todos, a barra mede 120/92px no desktop
+  e 108/84px no celular, e **não há transbordamento horizontal nem a 320px** (medido:
+  `scrollWidth === innerWidth` nas seis combinações).
+- **Rolagem por âncora depois da mudança de altura:** os cinco destinos do menu conferidos
+  em desktop e celular — a seção para 14px abaixo da barra e o título fica visível em
+  todos, com o deslocamento medido da barra real (92px no desktop, 84px no celular).
+- **As fotos das notícias:** contra um portal de teste que serve feed **sem imagem nenhuma**
+  e páginas com `og:image` — os três cartões saíram ilustrados com a foto da sua própria
+  matéria (200 e `naturalWidth` 1200 em cada), nos dois temas, sem erro de console e sem
+  falha de rede; o item sobre corretor continuou barrado pelo filtro.
 - **Carrossel de parceiros:** os 14 logos carregam (verificado por `naturalWidth`), saem
   no mesmo tamanho óptico e leem nos dois temas.
 - **Faixa de versículos:** 41 trocas seguidas conferidas no navegador — 18 versículos
@@ -767,8 +1064,9 @@ O projeto foi testado com navegador automatizado antes da entrega:
   ilustrações conferidos em cada um; nenhum transbordamento horizontal e nenhum aviso de
   console em nenhum dos dois.
 - **Console:** nenhum erro de JavaScript em nenhuma página ou viewport.
-- **Hidratação (modo de desenvolvimento):** as 9 rotas foram carregadas em desktop e
-  mobile sem um único aviso de *hydration mismatch*. Duas armadilhas foram tratadas na
+- **Hidratação (modo de desenvolvimento):** as 10 rotas — incluindo
+  `/calculadora-bonus` — foram carregadas em desktop e mobile sem um único aviso de
+  *hydration mismatch*. Duas armadilhas foram tratadas na
   origem: coordenadas vindas de `Math.sin`/`Math.cos` são arredondadas com o helper `xy()`
   de `story/sceneParts.tsx` (as duas implementações podem divergir na 14ª casa decimal), e
   o `<html>` usa `suppressHydrationWarning` porque a classe `js-anim` é adicionada por
@@ -794,6 +1092,9 @@ O projeto foi testado com navegador automatizado antes da entrega:
    seção "O que falam de nós" existir. Passo a passo na seção 5.
 3. **Confirmar o horário de atendimento** (`site.hours`) — é o único dado visível que não
    veio da corretora.
+   Vale conferir junto se a **ausência do telefone** na tela é a decisão definitiva: hoje
+   o único caminho de voz é o WhatsApp, e a ficha do negócio no Google fica sem o campo de
+   telefone (§1 traz o que descomentar para reverter).
 4. Revisar a Política de Privacidade e os Termos de Uso juridicamente e remover o aviso
    de pendência em `LegalPage.tsx`.
 5. Informar as redes sociais (`site.social`) e, se houver, o link do perfil no Google
@@ -801,4 +1102,8 @@ O projeto foi testado com navegador automatizado antes da entrega:
 6. Informar os indicadores reais (clientes, anos, apólices, seguradoras).
 7. Definir o destino dos leads (`LEADS_ADAPTER`) — o WhatsApp e o e-mail já funcionam.
 8. Substituir `about.paragraphs` pelo texto institucional verdadeiro.
-9. Publicar os primeiros conteúdos do blog.
+9. **Revisar as curiosidades uma vez por ano.** São 50 itens com fonte e ano visíveis
+   (`src/config/curiosities.ts`); os números de mercado envelhecem e o ano na tela mostra
+   isso. O endereço de cada fonte está no comentário acima do item.
+10. Publicar os primeiros conteúdos do blog — artigo próprio tem precedência sobre as
+    notícias de terceiro na mesma seção.
