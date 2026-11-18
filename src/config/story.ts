@@ -77,7 +77,7 @@ export const storyChapters: StoryChapter[] = [
       'Cada embarque carrega o faturamento de outra empresa, um prazo assinado em contrato e a sua reputação como transportador.',
     risk: 'Um desvio de rota. Uma carga que desaparece entre o embarque e a entrega. Um sinistro de milhões em cima do seu CNPJ.',
     answer:
-      'RCTR-C e RCF-DC transferem esse valor para a seguradora — e mantêm sua empresa habilitada a operar para os grandes embarcadores.',
+      'RCTR-C, RC-DC e RC-V — as três obrigatórias — transferem esse valor para a seguradora e mantêm sua empresa habilitada a operar para os grandes embarcadores.',
     related: ['seguro-de-transportes'],
   },
   {
@@ -102,7 +102,7 @@ export const storyChapters: StoryChapter[] = [
     key: 'shield',
     marker: 'Proteção',
     kicker: 'Capítulo final',
-    title: 'Nada disso deixa de acontecer. Deixa de te derrubar.',
+    title: 'Nada disso deixa de acontecer. Deixa de te preocupar.',
     build: 'Seguro não impede o acidente, o incêndio, o roubo ou a perda.',
     risk: 'Ele impede que um único dia ruim apague anos de trabalho.',
     answer:

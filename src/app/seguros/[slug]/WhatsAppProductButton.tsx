@@ -16,7 +16,7 @@ export function WhatsAppProductButton({ insuranceName }: { insuranceName: string
 
   return (
     <LinkButton
-      href={wa ?? '/#contato'}
+      href={wa ?? '/cotacao'}
       external={!!wa}
       variant="secondary"
       size="lg"

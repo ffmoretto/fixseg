@@ -10,6 +10,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${site.url}/`, lastModified: now, changeFrequency: 'weekly', priority: 1 },
     { url: `${site.url}/cotacao`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${site.url}/seguros`, lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
+    { url: `${site.url}/sobre`, lastModified: now, changeFrequency: 'yearly', priority: 0.6 },
+    {
+      url: `${site.url}/duvidas-frequentes`,
+      lastModified: now,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
     {
       url: `${site.url}/calculadora-bonus`,
       lastModified: now,

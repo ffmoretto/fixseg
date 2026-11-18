@@ -133,7 +133,7 @@ site que não veio de uma fonte. Para esconder o bloco por completo, deixe a lis
 | --- | --- |
 | `src/config/site.ts` | nome, contatos, endereço, CNPJ, SUSEP, redes sociais, textos dos CTAs |
 | `src/config/navigation.ts` | menu do header, links do footer, links legais |
-| `src/config/insurances.ts` | os 11 produtos: nome, descrição, coberturas, **campos do formulário de cotação** e palavras-chave de SEO |
+| `src/config/insurances.ts` | os 11 produtos: nome, descrição, coberturas, **campos do formulário de cotação** e palavras-chave de SEO. O de transportes lista as **três coberturas obrigatórias** do transporte rodoviário de carga — RCTR-C (avarias), RC-DC (roubo e desaparecimento) e RC-V (danos a terceiros). A sigla do meio costuma aparecer errada como "RCF-DC"; a correta é RC-DC |
 | `src/config/content.ts` | diferenciais, etapas do "como funciona", textos institucionais, **indicadores numéricos**, **parceiros (seguradoras)**, **depoimentos diretos**, FAQ e blog |
 | `src/config/curiosities.ts` | as **50 curiosidades sobre seguros** do carrossel: 5 por produto, cada uma com fonte e ano |
 | `src/config/story.ts` | roteiro da narrativa animada em scroll (capítulos, textos, produtos relacionados) |
@@ -290,6 +290,48 @@ Regra prática: **não recomponha as partes da logo em CSS.** Use o componente.
 
 ## 3. Estrutura do projeto
 
+### O que a home mostra, em ordem
+
+Hero · narrativa em scroll · seguros · como funciona · faixa "Patrimônio
+protegido" · parceiros · depoimentos do Google · curiosidades · artigos próprios.
+
+**Cinco blocos foram retirados da home** a pedido do cliente, porque a página
+estava longa demais: "Por que a FIXSEG" (diferenciais), o bloco de cotação, a
+seção institucional "Sobre a FIXSEG", "Dúvidas frequentes" e "Contato".
+
+**Dois deles viraram PÁGINAS próprias**, e continuam no menu: `/sobre` e
+`/duvidas-frequentes`. Era o pedido seguinte do cliente — manter as abas no
+cabeçalho, sem o conteúdo na home —, e é o arranjo certo para texto
+institucional e para perguntas frequentes: quem quer o assunto clica e vai até
+ele, em vez de atravessá-lo a caminho da cotação. No `navigation.ts` esses dois
+itens são os únicos **sem `#`**: o clique navega, não rola.
+
+| Página | O que mostra | De onde vem o conteúdo |
+| --- | --- | --- |
+| `/sobre` | texto institucional, os três pilares, os indicadores (quando preenchidos) e um convite para a cotação | `about` e `stats` em `src/config/content.ts` |
+| `/duvidas-frequentes` | as perguntas em acordeão, mais um cartão de apoio fixo na lateral | `faq` em `src/config/content.ts` |
+
+Três consequências que acompanham a mudança, e que valem registro:
+
+1. **o menu tem seis itens, que é o limite da barra.** Somados à logo, ao
+   seletor de tema, ao atalho da calculadora e ao CTA, ocupam o que cabe em
+   1280px — a largura em que o menu horizontal aparece (abaixo disso tudo vive
+   no menu lateral). Medido: sobram 16px entre o último item e o bloco de ações
+   em 1280px. Ao acrescentar um sétimo item, meça de novo antes de publicar;
+2. **o `FAQPage` mudou de endereço, não sumiu.** Ele saiu da home junto com as
+   perguntas — declarar perguntas ao Google numa página onde elas não aparecem
+   é contra as diretrizes dele — e **voltou a ser emitido em
+   `/duvidas-frequentes`**, onde elas estão visíveis. É o mesmo `faqSchema()` de
+   `src/lib/seo.tsx`; o que mudou foi o lugar legítimo de usá-lo;
+3. **o contato não ficou órfão.** "Contato" não voltou como aba: o botão
+   "Calcule seu seguro" leva à página `/cotacao` (que continua inteira), o botão
+   flutuante de WhatsApp acompanha a rolagem em todas as páginas e o rodapé traz
+   e-mail, endereço e horário.
+
+Do bloco institucional, o que ficou NA HOME foi só a faixa **"Patrimônio
+protegido"** (`src/components/sections/PatrimonyCta.tsx`, âncora `#patrimonio`).
+O texto longo e os indicadores foram para `/sobre`.
+
 ```
 src/
 ├── app/                          rotas (App Router)
@@ -297,6 +339,8 @@ src/
 │   ├── page.tsx                  home (compõe as seções)
 │   ├── globals.css               tokens, base, utilitários, prefers-reduced-motion
 │   ├── cotacao/                  página dedicada de cotação
+│   ├── sobre/                    institucional (saiu da home, virou rota)
+│   ├── duvidas-frequentes/       FAQ em acordeão + FAQPage no structured data
 │   ├── seguros/                  índice + página por produto ([slug])
 │   ├── politica-de-privacidade/
 │   ├── termos-de-uso/
@@ -309,9 +353,9 @@ src/
 │   ├── icons/                    conjunto de ícones próprio (sem biblioteca externa)
 │   ├── layout/                   Header, Footer, WhatsAppFloat, PageLoader,
 │   │                             SmoothScroll, AnchorScroll, Analytics, LegalPage
-│   ├── sections/                 Hero, Insurances, Differentials, HowItWorks,
-│   │                             QuoteSection/QuoteForm, About, Partners,
-│   │                             Testimonials, Faq, Blog, Contact
+│   ├── sections/                 Hero, Insurances, HowItWorks, PatrimonyCta,
+│   │                             Partners, Testimonials, Curiosities, Blog,
+│   │                             QuoteForm (usado pela página /cotacao)
 │   ├── story/                    narrativa animada em scroll
 │   │   ├── StoryScroll.tsx       orquestrador da timeline
 │   │   ├── sceneParts.tsx        kit de ilustração (massa, gradientes, peças)
@@ -389,6 +433,25 @@ timeline executa, sem que uma precise conhecer a outra.
 Regra de leitura: em `build` o valor declarado é **de onde o elemento vem** (ele
 entra e assenta); em `risk` e `shield` é **para onde ele vai**.
 
+**Dois movimentos no mesmo objeto?** Encaixe dois grupos. O orquestrador dá uma
+transformação por elemento, então um conjunto que precisa ENTRAR rodando e
+depois TOMBAR usa um grupo externo com `data-move-when="build"` e um interno com
+`data-move-when="risk"` — cada um cuida do seu beat e nenhum sobrescreve o outro.
+É assim que o caminhão da cena de carga chega à estrada e, depois, desestabiliza.
+
+**E para contar uma AUSÊNCIA?** `data-scene-vanish`: o elemento sai no instante
+do imprevisto, um pouco depois e mais devagar que o susto (sair junto com ele
+vira parte do susto, não falta). É o atributo que faltava para a cena de vida —
+sem ele só dava para acrescentar coisas ao quadro, e falta não se desenha
+acrescentando. O `data-risk-delay` escalona a saída, como escalona a entrada dos
+elementos de risco.
+
+**Pivô medido, não adivinhado.** Girar um conjunto em volta do eixo traseiro com
+uma fração chutada afunda o veículo no asfalto. `Ancora` + `origem()`
+(`sceneParts.tsx`) resolvem: um retângulo transparente envolve tudo o que o ator
+carrega e passa a definir a caixa, e `origem()` converte uma coordenada do
+desenho na porcentagem exata dentro dela.
+
 Duas armadilhas já resolvidas: `data-move-*` e `data-depth` **não podem estar no
 mesmo elemento** (os dois animam `transform` e brigam — use um grupo externo
 para o parallax e um interno para o ator); e, como o orquestrador só sabe levar
@@ -416,6 +479,47 @@ deixa a leitura mais rápida.
 Existe um teste para isso: `node /home/claude/story-fit.mjs <url>` mede, em 360×640,
 390×844, 412×915 e 768×1024, quanto sobra ou falta de altura em cada capítulo. Todo valor
 precisa continuar negativo (= cabe). Rode depois de mexer no texto de qualquer capítulo.
+
+### As cenas de vida e de carga, refeitas
+
+As duas foram redesenhadas do zero porque não contavam a história — e vale
+registrar o diagnóstico, que é o mesmo para qualquer cena que venha depois.
+
+**Vida.** As figuras eram pequenas, do mesmo tamanho e espalhadas na frente da
+casa; a ausência era um tracejado fino do tom do fundo; e nada se movia no
+instante em que ela acontecia. Sem movimento e sem contraste, falta não é
+percebida — o olho só vê um desenho um pouco diferente do anterior. Agora a casa
+foi para a direita, a família cresceu e ficou à esquerda com a figura que
+sustenta **isolada na ponta**, ligada à casa por um fio de luz com os tracinhos
+correndo (é a renda entrando). No imprevisto a pessoa **some** e no lugar dela
+fica o contorno vazado do corpo — o elemento mais claro do quadro —, o fio se
+rompe, as janelas apagam, a pasta cai e as contas se acumulam na porta. O selo
+nasce **exatamente sobre o vão** e de dentro dele sai um fio novo até a casa.
+A pessoa não volta: é a ideia inteira do seguro de vida, e desenhar o contrário
+seria mentir sobre o produto.
+
+**Carga.** O veículo não se lia como caminhão — cabine solta, estrado com rodas
+em posições que não correspondiam a eixo nenhum, caixas pairando no ar. O
+conjunto foi medido como conjunto: quinta roda sobre o tandem traseiro, cabine à
+frente do tandem, eixo dianteiro sob o nariz, carreta apoiada por cima, cinco
+pneus onde pneu existe. Ele entra rodando pela estrada, com a rota correndo por
+cima até o armazém de destino; no imprevisto a cinta arrebenta, o conjunto
+inclina e as quatro caixas saem do estrado, **cada uma com distância e giro
+próprios** (quatro caixas caindo igual parecem um elevador), e param na faixa da
+frente da pista, com poeira. A rota se parte no meio. Na proteção o selo cobre a
+carga caída e a rota se refaz até o destino — **o caminhão continua tombado**,
+porque o acidente aconteceu; o que muda é quem paga por ele.
+
+Uma limitação de perspectiva que explica o desenho: **de perfil, capotamento
+lateral não existe** — o giro acontece no eixo que aponta para o observador e na
+tela viraria um "cavalo de pau". O que se desenha é o que a perspectiva permite
+ler: o conjunto inclinando e a carga indo ao chão. É a informação que importa
+para o seguro.
+
+Duas medições que viraram regra ao refazer as cenas: caixa que tomba gira pelo
+**próprio centro**, não pela base (pela base, um tombo de 100° joga a caixa uma
+altura inteira dali e ela sai pelo rodapé do quadro); e cada caixa precisa de uma
+sombra de contato, senão o volume parece flutuar sobre o asfalto.
 
 ### O kit de ilustração das cenas
 
@@ -1010,9 +1114,10 @@ O projeto foi testado com navegador automatizado antes da entrega:
 - **Fluxo de cotação:** pré-seleção por URL (`/cotacao?seguro=seguro-auto`), validação de
   campos obrigatórios com mensagem visível, bloqueio sem consentimento LGPD, revisão e
   tela de sucesso animada.
-- **Formulário de contato:** validação e confirmação animada.
 - **Navegação por âncoras:** desktop e mobile param exatamente na altura correta, com o
-  título da seção visível e as animações de entrada disparando.
+  título da seção visível e as animações de entrada disparando. Depois do enxugamento da
+  home, **nenhum link de âncora aponta para seção inexistente** — verificado no navegador,
+  comparando cada `href="/#..."` com os `id` presentes na página (lista vazia).
 - **Menu mobile:** abre, navega e fecha corretamente.
 - **`prefers-reduced-motion`:** nenhum elemento fica invisível; a narrativa vira lista, as
   peças com movimento próprio param sem desaparecer e as ilustrações continuam íntegras.
@@ -1026,8 +1131,22 @@ O projeto foi testado com navegador automatizado antes da entrega:
   automático medido em 11s, **pausa confirmada com o ponteiro sobre o carrossel** e retomada
   ao sair. **`0` links dentro da seção** — nenhum caminho de saída do site. Nos dois temas,
   a 1440px e a 390px, sem erro de console e sem transbordamento horizontal.
-- **Seção de contato:** os dados de contato aparecem em UM só lugar da página (o rodapé).
-  A seção de contato ficou com o convite e o formulário, centrados.
+- **A home enxuta:** as seções presentes são exatamente `inicio`, `historia`, `seguros`,
+  `como-funciona`, `patrimonio`, `parceiros` e `curiosidades` (mais depoimentos, quando as
+  avaliações do Google estiverem ligadas, e artigos próprios, quando houver post). O
+  contato vive no rodapé, no botão flutuante de WhatsApp e na página `/cotacao`.
+- **As duas páginas novas:** `/sobre` e `/duvidas-frequentes` respondem 200, têm um `h1`
+  cada, nenhum erro de console e nenhum transbordamento nos dois temas. O clique nas abas
+  do menu foi exercitado no navegador: leva para a rota certa e o `h1` da página de destino
+  confere. `/duvidas-frequentes` emite `BreadcrumbList` **e `FAQPage`**; `/sobre` emite
+  `BreadcrumbList`. As duas entraram no `sitemap.xml`.
+- **O cabeçalho com seis itens:** medido a 1280, 1366 e 1440px — o menu continua visível,
+  com 16px de folga entre o último item e o bloco de ações. No celular os seis itens
+  aparecem numerados no menu lateral, seguidos da calculadora, do CTA e do WhatsApp.
+- **As cenas de vida e de carga:** conferidas quadro a quadro nos três tempos (construção,
+  imprevisto, proteção), nos dois temas, com recorte em PNG da ilustração — nada de
+  elemento saindo pelo rodapé do quadro, carga parando sobre o asfalto, selo no lugar
+  certo e nenhum erro de console.
 - **Ausência do telefone:** varredura no HTML entregue de `/`, `/cotacao`, `/seguros`,
   `/calculadora-bonus` e `/politica-de-privacidade` — o número formatado não aparece em
   nenhuma delas, e **toda** ocorrência dos dígitos está dentro de um

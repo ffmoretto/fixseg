@@ -118,13 +118,16 @@ export const insurances: Insurance[] = [
     name: 'Seguro de Transportes',
     short: 'A carga chega. E o prejuízo não.',
     description:
-      'Proteção para mercadorias em trânsito (RCTR-C, RCF-DC e averbações), exigida por embarcadores e essencial para operações logísticas.',
+      'As três coberturas obrigatórias do transporte rodoviário de carga — RCTR-C, RC-DC e RC-V —, exigidas por lei e pelos embarcadores para a operação rodar.',
     icon: 'cargo',
     audience: 'empresa',
     coverage: [
-      'RCTR-C — responsabilidade civil do transportador rodoviário de carga',
-      'RCF-DC — desaparecimento de carga (roubo)',
-      'RC-DC / RCTA-C conforme a operação',
+      /* As TRÊS obrigatórias do transporte rodoviário de carga. A sigla do
+         meio costuma aparecer errada como "RCF-DC": o seguro de roubo e
+         desaparecimento é o RC-DC. */
+      'RCTR-C — avarias e acidentes com a carga (obrigatório)',
+      'RC-DC — roubo e desaparecimento da carga (obrigatório)',
+      'RC-V — danos a terceiros durante o transporte (obrigatório)',
       'Averbação automática de embarques',
       'Cobertura para carga própria e de terceiros',
       'Gerenciamento de risco e adequação ao plano de gerenciamento',
@@ -143,7 +146,7 @@ export const insurances: Insurance[] = [
       },
       { name: 'rotas', label: 'Principais rotas e observações', type: 'textarea', placeholder: 'Ex.: PR–SP–MG, coleta em porto, gerenciamento de risco ativo…', full: true },
     ],
-    keywords: ['seguro de transportes', 'seguro de carga', 'RCTR-C', 'RCF-DC', 'seguro para transportadora'],
+    keywords: ['seguro de transportes', 'seguro de carga', 'RCTR-C', 'RC-DC', 'RC-V', 'seguro obrigatório de carga', 'seguro para transportadora'],
   },
   {
     slug: 'seguro-de-frota',

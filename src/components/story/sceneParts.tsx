@@ -36,6 +36,10 @@ import type { CSSProperties, ReactNode } from 'react';
  *                      elemento na proporção informada enquanto o capítulo
  *                      avança. Fundo perto de 0.1, primeiro plano perto de 1.
  *   data-scene-risk    o imprevisto. Entra com impacto, depois da construção.
+ *   data-scene-vanish  o contrário do risco: SAI no instante do imprevisto.
+ *                      É o que permite contar uma ausência — a pessoa que
+ *                      deixa de estar ali, a luz que apaga, a rota que se
+ *                      rompe. Um `data-risk-delay` opcional escalona a saída.
  *   data-scene-shield  a proteção. Entra por último e devolve a cor à cena.
  *
  * Um mesmo grupo pode ter contorno e massa: `data-scene-fill` no grupo das
@@ -869,6 +873,33 @@ export function ShieldSeal({
     </g>
   );
 }
+
+/* ========================================================================== */
+/* CAIXA E ORIGEM DE UM ATOR                                                  */
+/* ========================================================================== */
+
+/**
+ * O orquestrador recebe a origem da transformação em PORCENTAGEM da caixa do
+ * ator — e a caixa de um grupo é a união das caixas dos filhos, que muda quando
+ * o conteúdo cresce, gira ou ganha um brilho. Girar uma carreta em volta do
+ * pneu traseiro com uma fração adivinhada não funciona: erra alguns graus e o
+ * veículo afunda no asfalto ou flutua.
+ *
+ * `Ancora` é um retângulo transparente que ENVOLVE tudo o que o ator carrega:
+ * ele passa a definir a caixa, e `origem()` converte uma coordenada do desenho
+ * na porcentagem exata dentro dela. O pivô deixa de ser chute e vira medida.
+ *
+ * A receita nasceu na cena do cruzamento (RoadScene), que mantém a cópia local
+ * dela; aqui ficou a versão compartilhada.
+ */
+export type Caixa = [x: number, y: number, w: number, h: number];
+
+export const origem = ([bx, by, bw, bh]: Caixa, px: number, py: number) =>
+  `${xy(((px - bx) / bw) * 100)}% ${xy(((py - by) / bh) * 100)}%`;
+
+export const Ancora = ({ box: [x, y, w, h] }: { box: Caixa }) => (
+  <rect x={x} y={y} width={w} height={h} fill="transparent" />
+);
 
 /** Invólucro comum: viewBox, defs e cor base herdada. */
 export function Scene({ id, children }: { id: string; children: ReactNode }) {

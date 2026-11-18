@@ -8,15 +8,26 @@ export interface NavItem {
 export const mainNav: NavItem[] = [
   { label: 'Início', href: '/#inicio' },
   { label: 'Seguros', href: '/#seguros' },
-  { label: 'Sobre nós', href: '/#sobre' },
   { label: 'Como funciona', href: '/#como-funciona' },
-  { label: 'Dúvidas frequentes', href: '/#faq' },
-  { label: 'Contato', href: '/#contato' },
+  { label: 'Curiosidades', href: '/#curiosidades' },
+  /* Estes dois são PÁGINAS, não âncoras. O conteúdo saiu da home (que estava
+     longa demais) e ganhou rota própria — e é por isso que o `href` não tem
+     `#`: o clique leva para outra página, não rola a atual. */
+  { label: 'Sobre nós', href: '/sobre' },
+  { label: 'Dúvidas frequentes', href: '/duvidas-frequentes' },
 ];
-/* A seção de curiosidades NÃO entra aqui de propósito: os seis itens acima já
-   ocupam cerca de 600px e, somados à logo, ao seletor de tema, ao atalho da
-   calculadora e ao CTA, é o limite do que cabe na barra. O atalho para ela
-   existe nos links do rodapé. */
+/* COMO ESTE MENU CHEGOU AQUI.
+   A home encolheu a pedido do cliente e cinco blocos saíram dela. Dois deles —
+   "Sobre nós" e "Dúvidas frequentes" — continuam no menu, mas agora como
+   PÁGINAS próprias (/sobre e /duvidas-frequentes): o visitante que quiser o
+   assunto clica e vai até ele, em vez de atravessá-lo a caminho da cotação.
+   "Contato" não voltou: o botão "Calcule seu seguro" leva à página de cotação,
+   o botão flutuante de WhatsApp acompanha a rolagem e o rodapé traz e-mail,
+   endereço e horário.
+
+   São seis itens, que é o limite da barra: somados à logo, ao seletor de tema,
+   ao atalho da calculadora e ao CTA, ocupam o que cabe em 1280px — que é onde o
+   menu horizontal aparece (abaixo disso, tudo vive no menu lateral). */
 
 /**
  * Atalho da calculadora de bônus.
@@ -47,11 +58,10 @@ export const calculadoraLabelCurto = 'Bônus';
 export const footerNav: NavItem[] = [
   { label: 'Início', href: '/#inicio' },
   { label: 'Seguros', href: '/#seguros' },
-  { label: 'Por que a FIXSEG', href: '/#diferenciais' },
   { label: 'Como funciona', href: '/#como-funciona' },
-  { label: 'Sobre nós', href: '/#sobre' },
   { label: 'Curiosidades', href: '/#curiosidades' },
-  { label: 'Dúvidas frequentes', href: '/#faq' },
+  { label: 'Sobre nós', href: '/sobre' },
+  { label: 'Dúvidas frequentes', href: '/duvidas-frequentes' },
   { label: 'Calculadora de bônus', href: '/calculadora-bonus' },
   { label: 'Cotação', href: '/cotacao' },
 ];

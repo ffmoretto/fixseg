@@ -165,7 +165,7 @@ export function Hero() {
 
             <div className="translate-y-4 opacity-0">
               <LinkButton
-                href={wa ?? '/#contato'}
+                href={wa ?? '/cotacao'}
                 external={!!wa}
                 variant="secondary"
                 size="lg"

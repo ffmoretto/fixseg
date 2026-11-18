@@ -1,23 +1,25 @@
-import type { ReactNode } from 'react';
+import type { CSSProperties } from 'react';
 
 import {
   Air,
+  Ancora,
+  type Caixa,
   Contact,
   Fracture,
-  Ground,
+  GROUND_Y,
   INK,
-  LightCone,
+  MASS,
   Scene,
   ShieldSeal,
   Smoke,
-  Sparks,
   Wheel,
   accent,
   accentStroke,
-  alert,
+  alertStroke,
   detail,
   glass,
   mass,
+  origem,
   outline,
   sideFace,
   topFace,
@@ -27,917 +29,408 @@ import {
 
 const ID = 'sc-cargo';
 
-/* -------------------------------------------------------------------------- */
-/* PERSPECTIVA                                                                */
-/* -------------------------------------------------------------------------- */
-/**
- * Toda a cena usa UMA única direção de profundidade: para cima e para a
- * ESQUERDA. É o que mantém a perspectiva coerente entre a plataforma da
- * carreta, a cabine e os volumes de carga — o observador está atrás e à
- * esquerda do conjunto, um pouco acima dele. Por isso o que se vê de cada caixa
- * é sempre a face lateral (voltada para nós), o teto (pega a luz) e a tampa
- * traseira, à esquerda.
- */
-
-/* -------------------------------------------------------------------------- */
-/* GEOMETRIA DO CONJUNTO E DO TOMBAMENTO                                      */
-/* -------------------------------------------------------------------------- */
-/**
- * A carreta é uma PLATAFORMA, não um contêiner fechado: é a única forma de a
- * carga estar visível empilhada dentro dela antes do tombamento — e de o
- * espectador ver, no imprevisto, que o que caiu no chão é exatamente o que
- * estava em cima do assoalho.
+/* ==========================================================================
+ * CAPÍTULO 04 — "A carga não é sua. A responsabilidade é."
+ * ==========================================================================
+ * O QUE A CENA PRECISA CONTAR:
  *
- * As três medidas que governam o tombamento:
- *   PIVO_X / PIVO_Y  ponto de contato do pneu dianteiro do jogo de eixos da
- *                    carreta com o chão. É em volta dele que o conjunto gira —
- *                    o eixo de trás sai do chão, que é o que dá a leitura de
- *                    "tombou" em vez de "desceu";
- *   TOMBO_ANG        24°, dentro da faixa que lê como tombamento sem que a
- *                    ponta do conjunto saia do quadro. A esta altura o eixo de
- *                    trás da carreta fica 14 unidades no ar e a frente do
- *                    assoalho desce 39 até raspar o asfalto: os DOIS extremos
- *                    se movem, e é isso que separa um tombamento de uma
- *                    caçamba levantando;
- *   CANIVETE_ANG     −8° no cavalo, medidos a partir do pino-rei: o cavalo
- *                    acompanha em ÂNGULO DIFERENTE (16° contra os 24° da
- *                    carreta), e a dobra entre as duas unidades é o canivete.
- *                    Mais que isso e a roda dianteira do cavalo sai do quadro
- *                    por baixo — o conjunto é longo, e cada grau de rotação
- *                    joga a ponta dele 4 unidades para baixo.
- */
-const DECK_Y = 280; // aresta próxima do assoalho da carreta
-const CARGA_Y = 274; // face inferior dos volumes: o assoalho aparece na frente
-const PIVO_X = 150;
-const PIVO_Y = 330;
-const PINO_X = 240; // pino-rei: a articulação entre cavalo e carreta
-const PINO_Y = 292;
-const TOMBO_ANG = 24;
-const CANIVETE_ANG = -8;
-
-/* -------------------------------------------------------------------------- */
-/* RITMO DAS LINHAS TRACEJADAS                                                */
-/* -------------------------------------------------------------------------- */
-/**
- * `animate-dash-move` desloca o tracejado em exatamente 40 unidades por ciclo.
- * Para o laço fechar sem salto, a SOMA de traço + vão precisa dividir 40 — daí
- * "13 7", "5 35" e "20 20". Qualquer outro par pisca a cada volta.
- */
-const ROTA_TRACO = '13 7';
-const ROTA_PULSO = '5 35';
-
-/* -------------------------------------------------------------------------- */
-/* A ROTA, EM DOIS TRECHOS                                                    */
-/* -------------------------------------------------------------------------- */
-/**
- * O traçado é partido no ponto onde o imprevisto acontece. Não é capricho de
- * geometria: é o que permite ao trecho final RECOLHER no imprevisto (o traço
- * PARA de avançar, no meio do caminho) sem tocar no trecho que já se cumpriu —
- * e crescer de novo, do mesmo ponto até a entrega, na proteção.
- */
-const ROTA_A = 'M52 122C118 70 196 92 276 96';
-const ROTA_B = 'M276 96C350 102 408 116 500 72';
-const RUPTURA_X = 276;
-const RUPTURA_Y = 96;
-
-/* -------------------------------------------------------------------------- */
-/* CAIXA E ORIGEM DE UM ATOR                                                  */
-/* -------------------------------------------------------------------------- */
-/**
- * O orquestrador recebe a origem da transformação em PORCENTAGEM da caixa do
- * ator (ver `data-move-origin` em StoryScroll.tsx), e a caixa de um grupo é a
- * união das caixas dos filhos — ela muda quando o conteúdo cresce ou gira, e
- * caixa de curva de Bézier não é o retângulo dos seus pontos de controle.
- *
- * `Ancora` é um retângulo transparente maior que o conteúdo: ele passa a ser a
- * caixa do ator, e a partir dela `origem()` converte um ponto do desenho em
- * porcentagem exata. É assim que o tombamento gira em volta do PNEU, e não de
- * um ponto adivinhado no meio do conjunto.
- */
-type Caixa = [x: number, y: number, w: number, h: number];
-
-const origem = ([bx, by, bw, bh]: Caixa, px: number, py: number) =>
-  `${xy(((px - bx) / bw) * 100)}% ${xy(((py - by) / bh) * 100)}%`;
-
-const Ancora = ({ box: [x, y, w, h] }: { box: Caixa }) => (
-  <rect x={x} y={y} width={w} height={h} fill="transparent" />
-);
-
-/** Caixa do trecho final da rota (contém a curva inteira e o ponto de entrega). */
-const CAIXA_ROTA: Caixa = [272, 56, 244, 54];
-/** Caixa do desvio que sai da ruptura. */
-const CAIXA_DESVIO: Caixa = [272, 92, 44, 84];
-/** Caixa do conjunto inteiro — cavalo, carreta, sombra, fachos e poeira. */
-const CAIXA_CONJUNTO: Caixa = [-50, 150, 462, 196];
-/** Caixa só do cavalo mecânico, para o canivete girar no pino-rei. */
-const CAIXA_CAVALO: Caixa = [218, 142, 194, 204];
-
-/* -------------------------------------------------------------------------- */
-/* ATOR QUE CRESCE                                                            */
-/* -------------------------------------------------------------------------- */
-/**
- * O orquestrador só sabe levar um ator PARA um valor: no beat de risco não
- * existe "de onde". Para uma peça que precisa NASCER recolhida e crescer, o
- * caminho é desenhá-la no tamanho final e encolhê-la num grupo interno
- * ESTÁTICO — o ator de fora cresce de 1 até `fator` e devolve a peça ao tamanho
- * desenhado.
- *
- * `px`/`py` é o ponto que fica PARADO: o ponto de ruptura da rota. Como o
- * encolhimento é uniforme e acontece em volta dele, a porcentagem daquele ponto
- * dentro da caixa não muda — é por isso que a mesma `origem()` serve para a
- * peça encolhida e para a peça inteira.
- */
-function Cresce({
-  fator,
-  px,
-  py,
-  box,
-  when = 'risk',
-  dur = 0.5,
-  ease = 'power2.out',
-  children,
-}: {
-  fator: number;
-  px: number;
-  py: number;
-  box: Caixa;
-  when?: 'risk' | 'shield';
-  dur?: number;
-  ease?: string;
-  children: ReactNode;
-}) {
-  return (
-    <g
-      data-move-when={when}
-      data-move-scale={fator}
-      data-move-origin={origem(box, px, py)}
-      data-move-dur={dur}
-      data-move-ease={ease}
-    >
-      <Ancora box={box} />
-      {/* `xy()` porque o fator vem de uma divisão: servidor e navegador têm de
-          escrever exatamente a mesma string. */}
-      <g transform={`translate(${px} ${py}) scale(${xy(1 / fator)}) translate(${-px} ${-py})`}>
-        {children}
-      </g>
-    </g>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* VOLUME DE CARGA                                                            */
-/* -------------------------------------------------------------------------- */
-/**
- * Caixa em três faces. `x, y` é o canto superior esquerdo da face que olha para
- * o observador; `w, h` o tamanho dessa face; `dx, dy` a profundidade (o mesmo
- * eixo da cena, apenas mais curto quanto menor o volume).
- *
- * Massa por face: teto claro (`topFace`), lateral em gradiente de volume,
- * tampa traseira na sombra (`sideFace`). A cinta em ciano é o único ponto de cor
- * — é ela que diz "isto está lacrado".
- */
-function Crate({
-  x,
-  y,
-  w,
-  h,
-  dx = -16,
-  dy = -12,
-}: {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  dx?: number;
-  dy?: number;
-}) {
-  const front = `M${x} ${y}h${w}v${h}h${-w}Z`;
-  const top = `M${x} ${y}L${x + dx} ${y + dy}H${x + w + dx}L${x + w} ${y}Z`;
-  const end = `M${x} ${y}L${x + dx} ${y + dy}V${y + h + dy}L${x} ${y + h}Z`;
-  /* metades passam por `xy()`: divisão que vai virar string no HTML */
-  const midX = xy(x + w / 2);
-  const midY = xy(y + h / 2);
-
-  return (
-    <g>
-      <path {...sideFace(ID)} d={end} />
-      <path {...topFace(ID)} d={top} />
-      <path {...volume(ID)} d={front} />
-      <g data-scene-draw>
-        <path {...outline(1.5, 0.34)} d={front} />
-        <path {...outline(1.3, 0.26)} d={top} />
-        <path {...outline(1.3, 0.26)} d={end} />
-        <path {...accentStroke(1.6, 0.34)} d={`M${x} ${midY}H${x + w}`} />
-        <path {...detail(0.22)} d={`M${midX} ${y}V${y + h}`} />
-      </g>
-    </g>
-  );
-}
-
-/**
- * O VOLUME QUE VAI DESAPARECER.
- *
- * É um `Crate` com uma única diferença, e ela é decisiva: os contornos NÃO usam
- * `non-scaling-stroke`. O roubo é contado encolhendo o volume até o nada, e um
- * traço de espessura fixa sobrevive ao encolhimento — sobrava um borrão escuro
- * exatamente no lugar onde a carga devia ter desaparecido. Aqui o traço encolhe
- * junto e o volume deixa de existir de verdade.
- */
-function VolumeIntacto({
-  x,
-  y,
-  w,
-  h,
-  dx,
-  dy,
-}: {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  dx: number;
-  dy: number;
-}) {
-  const front = `M${x} ${y}h${w}v${h}h${-w}Z`;
-  const top = `M${x} ${y}L${x + dx} ${y + dy}H${x + w + dx}L${x + w} ${y}Z`;
-  const end = `M${x} ${y}L${x + dx} ${y + dy}V${y + h + dy}L${x} ${y + h}Z`;
-  const midY = xy(y + h / 2);
-  const linha = {
-    fill: 'none',
-    stroke: 'rgb(var(--fg) / .32)',
-    strokeWidth: 1.5,
-    strokeLinejoin: 'round' as const,
-  };
-
-  return (
-    <g>
-      <path {...sideFace(ID)} d={end} />
-      <path {...topFace(ID)} d={top} />
-      <path {...volume(ID)} d={front} />
-      <g data-scene-draw>
-        <path {...linha} d={front} />
-        <path {...linha} d={top} />
-        <path {...linha} d={end} />
-        <path
-          d={`M${x} ${midY}H${x + w}`}
-          fill="none"
-          stroke="rgb(var(--brand-2) / .34)"
-          strokeWidth="1.6"
-        />
-      </g>
-    </g>
-  );
-}
-
-/**
- * UM VOLUME QUE SE DERRAMA.
- *
- * Cada volume da carga é um ator do beat de risco: sai da carreta, cai e TOMBA.
- * A origem da rotação é `50% 100%` — a base do volume —, então o ponto que eu
- * controlo é a BASE dele: `dx`/`dy` levam a base até onde ela vai parar no
- * chão, e `rot` é o quanto o volume deita em cima dessa base. Sem isso a caixa
- * giraria pelo centro e terminaria enterrada ou flutuando.
- *
- * `dur` diferente em cada um é o que faz a carga se derramar em vez de cair em
- * bloco: os cinco partem juntos e chegam ao chão em tempos ligeiramente
- * diferentes.
- */
-function Volume({
-  dx,
-  dy,
-  rot,
-  dur,
-  ease = 'power2.in',
-  children,
-}: {
-  dx: number;
-  dy: number;
-  rot: number;
-  dur: number;
-  ease?: string;
-  children: ReactNode;
-}) {
-  return (
-    <g
-      data-move-when="risk"
-      data-move-x={dx}
-      data-move-y={dy}
-      data-move-rot={rot}
-      data-move-origin="50% 100%"
-      data-move-dur={dur}
-      data-move-ease={ease}
-    >
-      {children}
-    </g>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* POEIRA                                                                     */
-/* -------------------------------------------------------------------------- */
-/**
- * Poeira de asfalto: baforadas achatadas e claras que sobem do chão.
- * Diferente da fumaça do kit em dois pontos — é larga e baixa (o pó rasteja
- * antes de subir) e a opacidade vive na COR, não no atributo `opacity`, porque
- * `[data-scene-live]` é forçado a `opacity: 1` no modo de movimento reduzido.
- */
-function Poeira({
-  x,
-  y,
-  scale = 1,
-  delay = 0,
-}: {
-  x: number;
-  y: number;
-  scale?: number;
-  delay?: number;
-}) {
-  const puffs = [
-    { dx: 0, dy: 0, r: 11, d: 0 },
-    { dx: -13, dy: -3, r: 14, d: 0.95 },
-    { dx: 11, dy: -7, r: 9, d: 1.9 },
-  ];
-  return (
-    <g transform={`translate(${x} ${y}) scale(${scale})`}>
-      {puffs.map((p, i) => (
-        <ellipse
-          key={i}
-          data-scene-live
-          cx={p.dx}
-          cy={p.dy}
-          rx={p.r}
-          ry={p.r * 0.46}
-          fill="rgb(var(--fg) / .12)"
-          filter={`url(#${ID}-soft)`}
-          className="fill-box animate-smoke-rise"
-          style={{ animationDelay: `${p.d + delay}s`, animationDuration: '3s' }}
-        />
-      ))}
-    </g>
-  );
-}
-
-/**
- * Capítulo 04 — Carga.
- *
- * PROFUNDIDADE EM CAMADAS
- *  · 0.15 — o pátio de embarque e o de destino: galpões, contêineres que já são
- *    só silhueta, portas acesas e a mancha de luz que elas jogam no piso;
- *  · 0.28 — a rota contratada, no ar, com o tracejado correndo e um pulso de
- *    luz percorrendo o traçado;
- *  · 0.5  — o conjunto cavalo + carreta plataforma, CARREGADO: rodas girando,
- *    faróis acesos, giroflex piscando, poeira saindo do asfalto, e os cinco
- *    volumes empilhados e inteiros em cima do assoalho;
- *  · 0.9  — o volume que espera no destino, em primeiro plano.
+ *   1. CONSTRUÇÃO  um conjunto — cavalo mecânico mais carreta — rodando numa
+ *                  estrada, com a carga amarrada na plataforma e a rota
+ *                  correndo por cima, do embarque até o armazém de destino.
+ *   2. IMPREVISTO  a cinta arrebenta, o conjunto desestabiliza e a carga TOMBA
+ *                  na pista: as caixas saem voando do estrado, giram e param
+ *                  espalhadas no asfalto, levantando poeira. A rota se parte no
+ *                  meio do caminho — a entrega não vai acontecer.
+ *   3. PROTEÇÃO    o selo cobre a carga caída e a rota se refaz até o armazém.
+ *                  O caminhão continua tombado: o acidente aconteceu. O que
+ *                  muda é quem paga por ele.
  *
  * -----------------------------------------------------------------------------
- * O TOMBAMENTO, BEAT POR BEAT (atores, ver `data-move-*` em StoryScroll.tsx)
+ * POR QUE A CENA ANTERIOR NÃO FUNCIONAVA
  * -----------------------------------------------------------------------------
- *   construção  o conjunto ENTRA RODANDO pela esquerda, carregado; a rota se
- *               desenha do embarque e o ponto de entrega CHEGA pela ponta dela;
- *               os cinco volumes estão empilhados e inteiros dentro da carreta;
+ * O veículo não se lia como caminhão: a cabine era uma caixinha solta, o estrado
+ * era uma chapa com rodas em posições que não correspondiam a eixo nenhum, e as
+ * caixas pairavam no ar em vez de cair. Um desenho que o olho não reconhece não
+ * conta história nenhuma — vira ruído bonito. Aqui o conjunto foi medido como
+ * conjunto de verdade: quinta roda sobre o tandem traseiro, cabine à frente do
+ * tandem, eixo dianteiro sob o nariz da cabine, e a carreta apoiada por cima.
  *
- *   imprevisto  O CONJUNTO TOMBA. A carreta gira 21° em volta do ponto de
- *               contato do pneu dianteiro do seu jogo de eixos: o eixo de trás
- *               sai do chão e a frente do assoalho desce na direção do
- *               observador até raspar o asfalto. O cavalo, num ator ENCAIXADO,
- *               gira −8° em volta do pino-rei: as duas unidades ficam em
- *               ângulos diferentes e a dobra entre elas é o canivete.
- *               E A CARGA SE DERRAMA: os cinco volumes saem da carreta, caem,
- *               tombam sobre a própria base e espalham pelo chão — cada um com
- *               deslocamento, rotação e duração próprios (0,26 a 0,38), então
- *               nenhum cai junto com o outro. Poeira sobe do pneu que travou e
- *               dos três pontos onde a carga bateu.
- *               E O ROUBO: longe do monte que caiu, no pátio de destino, UM
- *               VOLUME DEIXA DE EXISTIR — ele encolhe até desaparecer e no
- *               lugar dele sobra o contorno tracejado. Duas metades da mesma
- *               cobertura, separadas no espaço para não se confundirem: o
- *               tombamento à esquerda, o desaparecimento à direita;
- *
- *   proteção    a rota se RECOMPÕE, do ponto de ruptura até a entrega, e o
- *               escudo entra.
- */
+ * -----------------------------------------------------------------------------
+ * POR QUE O TOMBAMENTO É PARCIAL
+ * -----------------------------------------------------------------------------
+ * De perfil, um capotamento lateral não existe: o giro acontece no eixo que
+ * aponta para o observador, e na tela ele viraria um "cavalo de pau". O que se
+ * desenha aqui é o que a perspectiva permite ler — o conjunto inclinando e a
+ * carga saindo do estrado. É a informação que importa para o seguro: a carga foi
+ * ao chão.
+ * ========================================================================== */
+
+/* --- a pista -------------------------------------------------------------- */
+const PISTA_TOPO = GROUND_Y; // aresta distante do asfalto
+const PISTA_FIM = 384; // aresta junto ao observador
+const EIXO_Y = 312; // centro dos pneus (raio 18 → encostam em 330)
+const RAIO = 18;
+
+/* --- o cavalo mecânico ---------------------------------------------------- */
+const CAB_E = 346;
+const CAB_D = 424;
+const CAB_TOPO = 224;
+const RODA_DIANT = 404;
+const TANDEM_A = 318;
+const TANDEM_B = 352;
+
+/* --- a carreta ------------------------------------------------------------ */
+const DECK_E = 80;
+const DECK_D = 340;
+const DECK_TOPO = 272;
+const BOGIE_A = 112;
+const BOGIE_B = 146;
+
+/* --- a carga -------------------------------------------------------------- */
+const CAIXA_W = 46;
+const CAIXA_H = 44;
+/** As quatro caixas em cima do estrado, da traseira para a frente. */
+const CARGA = [88, 140, 196, 248];
+
+/* O armazém de destino, lá no fundo. */
+const ARM_E = 462;
+const ARM_D = 552;
+const ARM_BASE = 318;
+
+/* Caixa do ator "conjunto": o pivô da inclinação é o tandem traseiro do
+   cavalo, que é onde um conjunto realmente pivota quando a traseira perde
+   aderência. Ver `Ancora`/`origem` em sceneParts. */
+const CAIXA_CONJUNTO: Caixa = [60, 200, 390, 150];
+
+/** Uma caixa de carga: três faces, para ter volume mesmo pequena. */
+function CaixaCarga({ x, y = DECK_TOPO - CAIXA_H }: { x: number; y?: number }) {
+  return (
+    <g>
+      {/* face frontal */}
+      <rect x={x} y={y} width={CAIXA_W} height={CAIXA_H} rx="2" {...volume(ID)} />
+      {/* topo em perspectiva curta */}
+      <path d={`M${x} ${y}l9-7h${CAIXA_W}l-9 7Z`} {...topFace(ID)} />
+      {/* lateral */}
+      <path d={`M${x + CAIXA_W} ${y}l9-7v${CAIXA_H}l-9 7Z`} {...sideFace(ID)} />
+      {/* fita de fechamento: o detalhe que faz o volume virar "caixa" */}
+      <path {...detail(0.3, 1.4)} d={`M${x + CAIXA_W / 2} ${y}v${CAIXA_H}`} />
+      <path {...detail(0.22, 1.1)} d={`M${x} ${y + CAIXA_H * 0.38}h${CAIXA_W}`} />
+      <rect {...outline(1.3, 0.3)} x={x} y={y} width={CAIXA_W} height={CAIXA_H} rx="2" />
+    </g>
+  );
+}
+
 export function CargoScene() {
   return (
     <Scene id={ID}>
-      <Air id={ID} />
-      <Ground id={ID} />
+      <Air id={ID} y={PISTA_TOPO} />
 
-      {/* ================================== plano distante (depth .15) ====
-          Sem `data-scene-fill`: o pátio ao fundo não precisa "ganhar corpo", ele
-          já entra com a cena. */}
-      <g data-depth="0.15">
-        {/* armazém do pátio de embarque, à esquerda */}
-        <path {...mass('far')} d="M-10 330v-70h60v70Z" />
-        <path {...mass('mid')} d="M-10 260h60l-8-12H-2Z" opacity=".6" />
-        <path {...mass('far')} d="M0 300h40v30H0Z" />
-        <path {...mass('air')} d="M6 286h24v14H6Z" />
+      {/* ------------------------------------------------------------ a pista */}
+      <g data-scene-fill mask={`url(#${ID}-edge)`}>
+        <path d={`M0 ${PISTA_TOPO}H560V400H0Z`} fill={INK.far} />
+        <path d={`M0 ${PISTA_TOPO}H560V${PISTA_TOPO + 7}H0Z`} fill={INK.mid} opacity=".5" />
+        <path d={`M0 ${PISTA_FIM}H560V${PISTA_FIM + 5}H0Z`} fill={INK.mid} opacity=".35" />
+      </g>
+      {/* faixa central: os tracinhos correm, e é o que diz "em movimento"
+          antes de qualquer outra coisa na cena */}
+      <path
+        data-scene-live
+        {...detail(0.32, 3)}
+        strokeDasharray="26 22"
+        className="animate-dash-move"
+        d={`M-20 ${(PISTA_TOPO + PISTA_FIM) / 2}H580`}
+      />
 
-        {/* armazém de destino, à direita. A faixa acesa fica ACIMA da altura
-            das cargas: na cota das portas, a única luz do fundo sumia atrás
-            do volume que espera no pátio. */}
-        <path {...mass('far')} d="M414 330v-104h146v104Z" />
-        <path {...mass('mid')} d="M414 226h146l-14-12H428Z" opacity=".6" />
-        {[422, 462, 502, 542].map((x0) => (
-          <rect key={x0} {...accent(0.36)} x={x0} y="232" width="28" height="12" rx="2" />
-        ))}
-        <g filter={`url(#${ID}-haze)`}>
-          <rect x="414" y="224" width="146" height="28" fill="rgb(var(--brand-2) / .18)" />
-        </g>
-        <ellipse cx="438" cy="331" rx="42" ry="8" fill="rgb(var(--brand-2) / .16)" />
+      {/* --------------------------------------------------------- o destino */}
+      <g data-scene-fill data-depth="0.18">
+        {/* Menor e mais atrás do que a primeira versão: do tamanho do caminhão
+            e colado nele, lia-se como um galpão preso ao para-choque. */}
+        <path d={`M${ARM_E} ${ARM_BASE}V268h${ARM_D - ARM_E}v${ARM_BASE - 268}Z`} fill={INK.far} />
+        <path d={`M${ARM_E - 8} 268L${(ARM_E + ARM_D) / 2} 250L${ARM_D + 8} 268Z`} fill={INK.mid} />
+        <rect x={ARM_E + 14} y="290" width="26" height="28" fill={INK.void} opacity=".45" />
+        <rect x={ARM_E + 50} y="290" width="26" height="28" fill={INK.void} opacity=".45" />
+        <path {...detail(0.18, 1.1)} d={`M${ARM_E} 280h${ARM_D - ARM_E}`} />
       </g>
 
-      {/* ================================= a rota contratada (depth .28) === */}
-      <g data-depth="0.28">
-        {/* ---------------------- trecho cumprido: embarque → ruptura ------ */}
-        <g data-scene-draw>
-          <path
-            {...accentStroke(2.4, 0.85)}
-            strokeDasharray={ROTA_TRACO}
-            d={ROTA_A}
-            filter={`url(#${ID}-glow)`}
-          />
-          <path {...detail(0.2, 1.1)} strokeDasharray="3 7" d="M52 132v18" />
-          <circle {...accentStroke(1.6, 0.5)} cx="52" cy="122" r="11" />
-        </g>
-
-        {/* o pulso que percorre o traçado: o embarque em trânsito */}
+      {/* ------------------------------------------------------------- A ROTA
+          Sai do ponto de embarque, à esquerda, e termina no destino. Os
+          tracinhos correm enquanto a carga está a caminho. */}
+      <g data-scene-vanish data-risk-delay="0">
         <path
           data-scene-live
-          d={ROTA_A}
-          fill="none"
-          stroke="rgb(var(--brand-2) / .95)"
-          strokeWidth="4"
-          strokeLinecap="round"
-          strokeDasharray={ROTA_PULSO}
+          {...accentStroke(2.6, 0.9)}
+          strokeDasharray="11 9"
           className="animate-dash-move"
-          style={{ animationDuration: '1.5s' }}
+          d="M26 168C120 118 220 112 300 128S430 150 486 124"
           filter={`url(#${ID}-glow)`}
         />
+        <circle cx="26" cy="168" r="5.5" {...accent(0.95)} />
+      </g>
 
-        <circle {...accent(0.95)} cx="52" cy="122" r="5" />
-        <circle
-          data-scene-live
-          cx="52"
-          cy="122"
-          r="11"
-          fill="none"
-          stroke="rgb(var(--brand-2) / .5)"
-          strokeWidth="2"
-          className="fill-box animate-pulse-ring"
-          style={{ animationDuration: '2.8s' }}
+      {/* O destino, sempre no lugar: o alfinete que a rota tenta alcançar. */}
+      <g data-scene-fill data-depth="0.2">
+        <path
+          d="M486 100c8 0 14 6 14 14 0 10-14 24-14 24s-14-14-14-24c0-8 6-14 14-14Z"
+          fill="rgb(var(--brand) / .9)"
         />
+        <circle cx="486" cy="114" r="5" fill="rgb(var(--panel))" />
+      </g>
 
-        {/* ATOR — trecho da ruptura até a entrega. No imprevisto ele RECOLHE
-            até o ponto de ruptura: o traço para de avançar no meio do caminho,
-            e o que sobra na tela é o percurso que se cumpriu. */}
+      {/* A ROTA PARTIDA: entra no imprevisto, com a interrupção no meio. */}
+      <g data-scene-risk data-risk-delay="1">
+        <path {...accentStroke(2.4, 0.42)} strokeDasharray="11 9" d="M26 168C110 122 190 114 252 124" />
+        <path {...accentStroke(2.4, 0.22)} strokeDasharray="6 10" d="M320 136C390 148 440 148 486 124" />
+        <path {...alertStroke(2.8, 0.95)} d="M268 120l22 22M290 118l-22 22" />
+      </g>
+
+      {/* ====================================================== O CONJUNTO
+          Entra rodando pela esquerda (build) e inclina no imprevisto (risk).
+          São DOIS grupos encaixados porque são dois movimentos diferentes: o
+          de fora leva o conjunto até o lugar, o de dentro o desestabiliza. */}
+      <g
+        data-move-when="build"
+        data-move-x="-300"
+        data-move-dur="0.9"
+        data-move-ease="power2.out"
+      >
         <g
           data-move-when="risk"
-          data-move-scale="0.08"
-          data-move-origin={origem(CAIXA_ROTA, RUPTURA_X, RUPTURA_Y)}
-          data-move-dur="0.32"
+          data-move-rot="-7"
+          data-move-y="3"
+          data-move-dur="0.5"
           data-move-ease="power3.in"
+          data-move-origin={origem(CAIXA_CONJUNTO, TANDEM_A, GROUND_Y)}
         >
-          <Ancora box={CAIXA_ROTA} />
-          <g data-scene-draw>
-            <path
-              {...accentStroke(2.4, 0.85)}
-              strokeDasharray={ROTA_TRACO}
-              d={ROTA_B}
-              filter={`url(#${ID}-glow)`}
-            />
-          </g>
-          <path
-            data-scene-live
-            d={ROTA_B}
-            fill="none"
-            stroke="rgb(var(--brand-2) / .95)"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeDasharray={ROTA_PULSO}
-            className="animate-dash-move"
-            style={{ animationDuration: '1.5s' }}
-            filter={`url(#${ID}-glow)`}
-          />
+          <Ancora box={CAIXA_CONJUNTO} />
+          <Contact id={ID} x={240} rx={190} ry={13} opacity={0.75} />
 
-          {/* ATOR — a entrega: o ponto de destino CHEGA pela rota. */}
-          <g
-            data-move-when="build"
-            data-move-x="-58"
-            data-move-y="9"
-            data-move-dur="1.05"
-            data-move-ease="power2.out"
-          >
-            <g data-scene-draw>
-              <circle {...accentStroke(1.6, 0.5)} cx="500" cy="72" r="11" />
-              <path {...detail(0.2, 1.1)} strokeDasharray="3 7" d="M500 82v18" />
-            </g>
-            <circle {...accent(0.95)} cx="500" cy="72" r="5" />
-            <circle
-              data-scene-live
-              cx="500"
-              cy="72"
-              r="11"
-              fill="none"
-              stroke="rgb(var(--brand-2) / .5)"
-              strokeWidth="2"
-              className="fill-box animate-pulse-ring"
-              style={{ animationDuration: '2.8s', animationDelay: '1.4s' }}
-            />
-          </g>
-        </g>
-      </g>
-
-      {/* ============================ o asfalto que corre (depth .5) ======= */}
-      <g data-depth="0.5">
-        <rect x="-20" y="340" width="600" height="22" fill={INK.air} />
-        <path
-          data-scene-live
-          d="M-20 351H580"
-          fill="none"
-          stroke={INK.mid}
-          strokeWidth="5"
-          strokeDasharray="20 20"
-          className="animate-dash-move"
-          style={{ animationDuration: '0.55s' }}
-        />
-      </g>
-
-      {/* =============================== o conjunto (depth .5) ============ */}
-      {/* O parallax fica no grupo de FORA e os atores nos de dentro: as duas
-          coisas escrevem `transform`, e no mesmo elemento uma anularia a
-          outra. */}
-      <g data-depth="0.5">
-        {/* ATOR — o conjunto e a carga ENTRAM RODANDO pela esquerda. As rodas já
-            giram por conta própria (CSS), então o deslocamento é o que falta
-            para o conjunto estar de fato viajando, carregado. */}
-        <g
-          data-move-when="build"
-          data-move-x="-430"
-          data-move-dur="0.9"
-          data-move-ease="power1.out"
-        >
-          {/* ATOR — O TOMBAMENTO. A carreta gira em volta do PONTO DE CONTATO
-              do pneu dianteiro do jogo de eixos: o eixo de trás sai do chão e a
-              frente do assoalho desce na direção do observador. */}
-          <g
-            data-move-when="risk"
-            data-move-rot={TOMBO_ANG}
-            data-move-origin={origem(CAIXA_CONJUNTO, PIVO_X, PIVO_Y)}
-            data-move-dur="0.32"
-            data-move-ease="power2.in"
-          >
-            <Ancora box={CAIXA_CONJUNTO} />
-            <Contact id={ID} x={PIVO_X} y={330} rx={190} ry={13} />
-
-            {/* --------------------------------- carreta plataforma -------
-                SEM `data-scene-fill`: a materialização da cena é escalonada, e
-                o conjunto é o último grupo de massa da lista — no instante em
-                que o usuário lê a construção do capítulo, a carreta ainda
-                estaria em 40% de opacidade e a carga, invisível. Quem ENTRA
-                RODANDO não precisa aparecer aos poucos: a entrada já é a
-                revelação, e os contornos continuam sendo desenhados pelo
-                DrawSVG. */}
-            <g>
-              {/* assoalho: teto (a superfície onde a carga pisa), face próxima
-                  e tampa traseira, à esquerda, na sombra */}
-              <path {...topFace(ID)} d={`M52 ${DECK_Y}L28 264H214L238 ${DECK_Y}Z`} />
-              <path {...sideFace(ID)} d={`M52 ${DECK_Y}L28 264V276L52 292Z`} />
-              <path {...volume(ID)} d={`M52 ${DECK_Y}H238V292H52Z`} />
-              {/* paravento da frente: a parede que separa a carga da cabine */}
-              <path {...mass('near')} d="M226 228H238V280H226Z" />
-              <path {...topFace(ID)} d="M226 228L206 214H218L238 228Z" />
-              {/* longarina, quinta roda e cavas de roda */}
-              <path {...mass('deep')} d="M56 292H246V300H56Z" />
-              {/* a face de BAIXO da plataforma: em pé ela não existe, mas
-                  quando a carreta gira é ela que aparece — e é o que diz que
-                  o conjunto saiu da posição em que devia estar */}
-              <path {...mass('ink')} d="M60 300H244V307H60Z" />
-              <path {...mass('deep')} d="M232 286h14v12h-14Z" />
-              <path {...mass('deep')} d="M93 300A19 12 0 01131 300ZM131 300A19 12 0 01169 300Z" />
-            </g>
-
-            <g data-scene-draw>
-              <path {...outline(1.7, 0.4)} d={`M52 ${DECK_Y}H238V292H52Z`} />
+          {/* ---------------------------------------------------- a carreta */}
+          <g data-scene-fill>
+            {/* estrado */}
+            <path d={`M${DECK_E} ${DECK_TOPO}H${DECK_D}v10H${DECK_E}Z`} {...volume(ID)} />
+            <path d={`M${DECK_E} ${DECK_TOPO + 10}H${DECK_D}v4H${DECK_E}Z`} fill={INK.deep} />
+            {/* ripas do assoalho: sem elas, o estrado vazio depois do tombo
+                vira uma prancha cinza sem leitura */}
+            {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
               <path
-                {...outline(1.3, 0.28)}
-                d={`M52 ${DECK_Y}L28 264H214L238 ${DECK_Y}M28 264V276L52 292`}
+                key={i}
+                {...detail(0.18, 1)}
+                d={`M${DECK_E + 16 + i * 32} ${DECK_TOPO}v10`}
               />
-              <path {...detail(0.24)} d="M84 280V292M116 280V292M148 280V292M180 280V292M212 280V292" />
-            </g>
-
-            {/* faixa refletiva na longarina: pega a luz do pátio */}
-            <path
-              data-scene-live
-              d="M60 296H240"
-              fill="none"
-              stroke="rgb(var(--brand-2) / .5)"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeDasharray="20 20"
-              className="animate-dash-move"
-              style={{ animationDuration: '2.2s' }}
-            />
-
-            <Wheel id={ID} x={112} y={311} r={19} />
-            <Wheel id={ID} x={150} y={311} r={19} />
-
-            {/* a longarina racha onde a carga se deslocou */}
-            <Fracture d="M176 292l10 10-8 8" delay={0.22} />
-
-            {/* --------------------------------------- cavalo mecânico ----
-                ATOR — o CANIVETE: o cavalo gira em volta do pino-rei, num
-                ângulo diferente do da carreta. Como este ator está DENTRO do
-                ator do tombamento, a articulação continua ligada: o que muda é
-                só o ângulo entre as duas unidades. */}
-            <g
-              data-move-when="risk"
-              data-move-rot={CANIVETE_ANG}
-              data-move-origin={origem(CAIXA_CAVALO, PINO_X, PINO_Y)}
-              data-move-dur="0.3"
-              data-move-ease="power2.in"
-            >
-              <Ancora box={CAIXA_CAVALO} />
-
-              <g>
-                {/* teto da cabine, no mesmo eixo de profundidade da carreta */}
-                <path {...topFace(ID)} d="M256 200L230 182H272L298 200Z" />
-                {/* corpo da cabine */}
-                <path
-                  {...volume(ID)}
-                  d="M244 288V212C244 205 248 200 256 200H298C302 200 305 201 307 204L326 232C328 235 329 238 329 242V288Z"
-                />
-                {/* vidraça: janela da porta e para-brisa */}
-                <rect {...glass(ID)} x="258" y="212" width="36" height="30" rx="4" />
-                <path {...glass(ID)} d="M302 208L322 236V244H302Z" />
-                {/* espelho, para-choque e escapamento vertical */}
-                <path {...mass('near')} d="M328 212h6v14h-6Z" />
-                <path {...mass('ink')} d="M322 276h14v18h-14Z" />
-                <path {...mass('near')} d="M232 186h8v96h-8Z" />
-                <path {...mass('near')} d="M229 182h14v7h-14Z" />
-                {/* chassi e cavas do cavalo */}
-                <path {...mass('deep')} d="M240 288H332V298H240Z" />
-                <path
-                  {...mass('deep')}
-                  d="M235 298A19 12 0 01273 298ZM297 298A19 12 0 01335 298Z"
-                />
-              </g>
-
-              <g data-scene-draw>
-                <path
-                  {...outline(1.7, 0.4)}
-                  d="M244 288V212C244 205 248 200 256 200H298C302 200 305 201 307 204L326 232C328 235 329 238 329 242V288"
-                />
-                <path {...outline(1.3, 0.26)} d="M256 200L230 182H272L298 200" />
-                <rect {...outline(1.3, 0.3)} x="258" y="212" width="36" height="30" rx="4" />
-                <path {...outline(1.3, 0.3)} d="M302 208L322 236V244H302Z" />
-                <path {...accentStroke(1.6, 0.6)} d="M262 254h11" />
-              </g>
-
-              {/* faróis: o conjunto está rodando */}
-              <g>
-                <path {...accent(0.9)} d="M323 250h8v12h-8Z" />
-                <path {...accent(0.7)} d="M323 266h8v8h-8Z" />
-                <Wheel id={ID} x={254} y={311} r={19} />
-                <Wheel id={ID} x={316} y={311} r={19} />
-              </g>
-              <LightCone x={332} y={256} length={64} spread={26} angle={-3} opacity={0.3} />
-              <ellipse cx="356" cy="330" rx="38" ry="8" fill="rgb(var(--brand-2) / .2)" />
-              <ellipse
-                cx="331"
-                cy="258"
-                rx="22"
-                ry="17"
-                fill="rgb(var(--brand-2) / .42)"
-                filter={`url(#${ID}-haze)`}
-              />
-
-              {/* giroflex no teto da cabine: o único âmbar antes do imprevisto */}
-              <g>
-                <path {...mass('deep')} d="M250 178h18v4h-18Z" />
-                <path {...alert(0.9)} d="M252 170h14v9h-14Z" />
-              </g>
-              <ellipse
-                data-scene-live
-                cx="259"
-                cy="173"
-                rx="17"
-                ry="13"
-                fill="rgb(var(--alert-2) / .45)"
-                filter={`url(#${ID}-haze)`}
-                className="fill-box animate-flicker"
-                style={{ animationDuration: '1.3s' }}
-              />
-              <Smoke id={ID} x={236} y={174} scale={0.55} />
-            </g>
+            ))}
+            {/* longarina e suporte do bogie */}
+            <path d={`M${BOGIE_A - 16} ${DECK_TOPO + 14}h${BOGIE_B - BOGIE_A + 32}v16h-${BOGIE_B - BOGIE_A + 32}Z`} fill={INK.deep} />
+            {/* para-choque traseiro, a peça que identifica a traseira */}
+            <path d={`M${DECK_E - 4} ${DECK_TOPO + 14}h8v34h-8Z`} fill={INK.deep} />
+            <path d={`M${DECK_E - 10} ${DECK_TOPO + 44}h26v7h-26Z`} fill={INK.near} />
           </g>
 
-          {/* ------------------------------------- a poeira da rodagem ---- */}
-          <Poeira x={92} y={332} scale={0.8} />
-          <Poeira x={276} y={334} scale={0.6} delay={0.9} />
+          {/* ----------------------------------------------- o cavalo mecânico */}
+          <g data-scene-fill>
+            {/* chassi */}
+            <path d={`M296 284h134v10H296Z`} fill={INK.deep} />
+            {/* quinta roda: o prato onde a carreta se apoia */}
+            <path d={`M306 274h44v10h-44Z`} fill={INK.near} />
+            {/* cabine */}
+            <path
+              d={`M${CAB_E} 292V${CAB_TOPO + 16}c0-9 5-15 14-17l40-7c13-2 22 5 23 17l3 26v60Z`}
+              {...volume(ID)}
+            />
+            {/* defletor de teto */}
+            <path d={`M${CAB_E + 6} ${CAB_TOPO + 14}l10-12h30l-4 12Z`} fill={INK.mid} />
+            {/* para-brisa e janela lateral */}
+            <path d={`M${CAB_D - 30} ${CAB_TOPO + 12}l20 4 3 22h-23Z`} {...glass(ID)} />
+            <path d={`M${CAB_E + 12} ${CAB_TOPO + 18}h28v26h-28Z`} {...glass(ID)} />
+            {/* grade e para-choque */}
+            <path d={`M${CAB_D - 6} 262h12v30h-12Z`} fill={INK.deep} />
+            <path d={`M${CAB_D - 10} 284h22v12h-22Z`} fill={INK.near} />
+            {/* farol */}
+            <ellipse cx={CAB_D + 2} cy="276" rx="5" ry="4" fill="rgb(var(--brand-2) / .9)" />
+            {/* escapamento vertical, atrás da cabine */}
+            <path d={`M${CAB_E - 10} 206h9v86h-9Z`} fill={INK.deep} />
+            {/* retrovisor */}
+            <path {...detail(0.4, 2)} d={`M${CAB_D - 2} ${CAB_TOPO + 16}l10 4v16`} />
+            <path {...outline(1.4, 0.3)} d={`M${CAB_E} 292V${CAB_TOPO + 16}c0-9 5-15 14-17l40-7c13-2 22 5 23 17l3 26`} />
+          </g>
 
-          {/* ==================== A CARGA ==================================
-              Os volumes ficam FORA do ator que tomba, de propósito: eles têm de
-              se derramar em coordenadas da CENA, e não acompanhar a carreta que
-              vira. Em repouso estão empilhados em cima do assoalho, inteiros, a
-              6 unidades da aresta da plataforma — é essa folga que deixa o
-              assoalho aparecer na frente deles e faz a carga estar DENTRO da
-              carreta, não em cima de uma linha.
-
-              No risco, cada um leva a própria base até um ponto do chão e deita
-              em cima dela. Os cinco partem juntos; as durações diferentes é que
-              fazem a carga se derramar. */}
+          {/* fumaça do escapamento: o conjunto está trabalhando */}
           <g>
-            <Volume dx={-3} dy={98} rot={34} dur={0.3}>
-              <Crate x={58} y={CARGA_Y - 42} w={56} h={42} dx={-18} dy={-13} />
-            </Volume>
-            <Volume dx={-7} dy={106} rot={-30} dur={0.36}>
-              <Crate x={118} y={CARGA_Y - 42} w={56} h={42} dx={-18} dy={-13} />
-            </Volume>
-            {/* este não chega ao chão: fica pendurado na aresta do assoalho que
-                girou. É ele que impede a plataforma vazia de parecer uma rampa */}
-            <Volume dx={54} dy={58} rot={28} dur={0.26}>
-              <Crate x={178} y={CARGA_Y - 42} w={54} h={42} dx={-18} dy={-13} />
-            </Volume>
-            <Volume dx={212} dy={132} rot={-44} dur={0.38} ease="power1.in">
-              <Crate x={70} y={CARGA_Y - 76} w={48} h={34} dx={-15} dy={-11} />
-            </Volume>
-            <Volume dx={220} dy={146} rot={22} dur={0.33} ease="power1.in">
-              <Crate x={132} y={CARGA_Y - 76} w={48} h={34} dx={-15} dy={-11} />
-            </Volume>
+            {[0, 1, 2].map((i) => (
+              <circle
+                key={i}
+                data-scene-live
+                cx={CAB_E - 6 + i * 2}
+                cy={200}
+                r={5 + i}
+                fill={`rgb(var(--fg) / ${MASS.air})`}
+                className="animate-smoke-rise"
+                style={{ animationDelay: `${i * 0.9}s` } as CSSProperties}
+              />
+            ))}
+          </g>
+
+          {/* --------------------------------------------------------- rodas */}
+          <g data-scene-fill>
+            <Wheel id={ID} x={BOGIE_A} y={EIXO_Y} r={RAIO} />
+            <Wheel id={ID} x={BOGIE_B} y={EIXO_Y} r={RAIO} />
+            <Wheel id={ID} x={TANDEM_A} y={EIXO_Y} r={RAIO} />
+            <Wheel id={ID} x={TANDEM_B} y={EIXO_Y} r={RAIO} />
+            <Wheel id={ID} x={RODA_DIANT} y={EIXO_Y} r={RAIO} />
           </g>
         </g>
       </g>
 
-      {/* ============= o volume que espera no destino (depth .9) ===========
-          ATOR — O ROUBO. Ele existe na construção, inteiro, no pátio de
-          destino; no imprevisto ENCOLHE até deixar de existir. Encolher (e não
-          apagar) é o que o orquestrador sabe fazer com um ator — e evita
-          remendar o fundo com um retângulo de cor por cima da carga. */}
-      <g data-depth="0.9">
-        <g>
+      {/* ======================================================== A CARGA
+          Cada caixa é um ator com destino próprio. Na construção elas chegam
+          junto com o conjunto; no imprevisto saem do estrado, giram e param no
+          asfalto. O trajeto de cada uma é diferente de propósito: quatro caixas
+          caindo igual parecem um elevador, não um tombamento. */}
+      {[
+        /* Cada caixa cai numa distância e num giro diferentes, e todas param
+           NA FAIXA DA FRENTE da pista — abaixo das rodas, onde o olho as lê
+           como "no chão" e não como "atrás do caminhão". */
+        { x: CARGA[0], mx: -46, my: 82, rot: -96 },
+        { x: CARGA[1], mx: -18, my: 74, rot: 58 },
+        { x: CARGA[2], mx: -4, my: 80, rot: -42 },
+        { x: CARGA[3], mx: 34, my: 70, rot: 122 },
+      ].map((c, i) => (
+        <g
+          key={c.x}
+          data-move-when="build"
+          data-move-x="-300"
+          data-move-dur="0.9"
+          data-move-ease="power2.out"
+        >
           <g
             data-move-when="risk"
-            data-move-scale="0.02"
-            data-move-origin="50% 100%"
-            data-move-dur="0.3"
+            data-move-x={c.mx}
+            data-move-y={c.my}
+            data-move-rot={c.rot}
+            data-move-dur="0.62"
             data-move-ease="power2.in"
+            /* Gira em volta do PRÓPRIO CENTRO, não da base. Girando pela base,
+               um tombo de 100° joga a caixa a uma altura inteira dali e ela
+               saía pelo rodapé do quadro — foi medido. Pelo centro, a caixa
+               tomba onde caiu, que é o que acontece de verdade. */
+            data-move-origin={origem(
+              [c.x - 10, DECK_TOPO - CAIXA_H - 10, CAIXA_W + 30, CAIXA_H + 20],
+              c.x + CAIXA_W / 2,
+              DECK_TOPO - CAIXA_H / 2,
+            )}
+            data-depth={0.9 - i * 0.02}
           >
-            {/* a sombra vive DENTRO do ator: uma carga que deixou de existir
-                não pode continuar projetando sombra no piso do pátio */}
-            <Contact id={ID} x={486} y={332} rx={54} ry={10} />
-            <VolumeIntacto x={456} y={286} w={58} h={46} dx={-18} dy={-13} />
+            <Ancora box={[c.x - 10, DECK_TOPO - CAIXA_H - 10, CAIXA_W + 30, CAIXA_H + 20]} />
+            <CaixaCarga x={c.x} />
           </g>
         </g>
+      ))}
+
+      {/* A CINTA que amarra a carga. Arrebenta no imprevisto — é o gesto que
+          explica por que as caixas saíram voando. */}
+      <g data-scene-vanish data-risk-delay="0">
+        <path
+          {...detail(0.5, 3)}
+          d={`M${DECK_E + 2} ${DECK_TOPO + 2}v-10h${DECK_D - DECK_E - 50}v10`}
+        />
+        <path {...detail(0.5, 3)} d={`M${CARGA[1] + CAIXA_W / 2} ${DECK_TOPO - CAIXA_H - 4}v${CAIXA_H + 6}`} />
+        <path {...detail(0.5, 3)} d={`M${CARGA[2] + CAIXA_W / 2} ${DECK_TOPO - CAIXA_H - 4}v${CAIXA_H + 6}`} />
       </g>
-
-      {/* ==================================================== o imprevisto == */}
-
-      {/* 1. a ruptura, exatamente onde o trecho final recolhe: as duas arestas
-             do corte e a faísca de rompimento. */}
+      {/* as duas pontas soltas da cinta rompida */}
       <g data-scene-risk data-risk-delay="0">
-        <path {...outline(2.4, 0.44)} d="M266 86l8 18M288 88l8 18" />
-        <ellipse
-          cx="279"
-          cy="98"
-          rx="34"
-          ry="24"
-          fill="rgb(var(--alert) / .3)"
-          filter={`url(#${ID}-haze)`}
-        />
-        <Sparks x={277} y={97} count={8} radius={22} tone="alert" />
+        <path {...detail(0.45, 3)} d={`M${DECK_E + 2} ${DECK_TOPO - 8}q26-16 48-6`} />
+        <path {...detail(0.45, 3)} d={`M${DECK_D - 60} ${DECK_TOPO - 8}q-22-18-46-6`} />
       </g>
 
-      {/* 2. o desvio de rota: o percurso que ninguém contratou.
-             ATOR — o ponto de desvio SALTA da ruptura: nasce recolhido no ponto
-             de corte e se abre para baixo, na direção que a carga tomou. */}
-      <g data-scene-risk data-risk-delay="0.08">
-        <Cresce
-          box={CAIXA_DESVIO}
-          px={RUPTURA_X}
-          py={RUPTURA_Y}
-          fator={2.1}
-          dur={0.3}
-          ease="back.out(1.8)"
-        >
-          <path
-            d="M276 96c28 10 36 30 30 50"
-            fill="none"
-            stroke={`${INK.near}`}
-            strokeWidth="2.6"
-            strokeLinecap="round"
-            vectorEffect="non-scaling-stroke"
-          />
-          <path
-            d="M299 137l7 10 9 -7"
-            fill="none"
-            stroke={`${INK.near}`}
-            strokeWidth="2.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            vectorEffect="non-scaling-stroke"
-          />
-        </Cresce>
+      {/* POEIRA onde as caixas batem no asfalto. */}
+      <g data-scene-risk data-risk-delay="2">
+        <Smoke id={ID} x={66} y={372} scale={0.72} />
+        <Smoke id={ID} x={150} y={376} scale={0.58} />
+        <Smoke id={ID} x={300} y={370} scale={0.5} />
       </g>
 
-      {/* 3. a poeira que o tombamento levanta: no pneu que travou e nos três
-             pontos onde os volumes bateram no chão. */}
-      <g data-scene-risk data-risk-delay="0.3">
-        <Poeira x={PIVO_X} y={338} scale={1.1} />
-        <Poeira x={80} y={380} scale={1.15} delay={0.4} />
-        <Poeira x={136} y={390} scale={1.2} delay={0.7} />
-        <Poeira x={298} y={372} scale={1.05} delay={1} />
-        <Poeira x={364} y={386} scale={0.9} delay={1.4} />
+      {/* A caixa que não resistiu: rompida, com o conteúdo à mostra. */}
+      <g data-scene-risk data-risk-delay="3">
+        <Fracture d="M44 372l16-12 10 14 14-10" width={2} />
+        <Fracture d="M196 378l14-10 8 12" width={1.6} delay={0.1} />
       </g>
 
-      {/* 3b. o arrasto: onde a longarina da carreta raspou o asfalto. É a marca
-              que separa "o conjunto tombou" de "o conjunto desceu uma rampa". */}
-      <g data-scene-risk data-risk-delay="0.2">
-        <path
-          d="M220 344c26 5 48 7 70 5"
-          fill="none"
-          stroke={`${INK.ink}`}
-          strokeWidth="7"
-          strokeLinecap="round"
-          opacity=".34"
-          vectorEffect="non-scaling-stroke"
-        />
-        <path
-          d="M232 352c24 4 44 5 62 3"
-          fill="none"
-          stroke={`${INK.deep}`}
-          strokeWidth="4"
-          strokeLinecap="round"
-          opacity=".4"
-          vectorEffect="non-scaling-stroke"
-        />
-      </g>
+      {/* ===================================================== A PROTEÇÃO */}
+      {/* O selo cobre a carga no chão — não o caminhão. É a carga que está
+          segurada, e é dela que a história trata. */}
+      <ShieldSeal id={ID} x={118} y={196} size={86} />
 
-      {/* 4. e o lugar onde a carga estava: o contorno tracejado, o buraco que
-             sobra quando um volume desaparece entre o embarque e a entrega. */}
-      <g data-scene-risk data-risk-delay="0.4">
-        <path
-          data-scene-live
-          d="M456 286h58v46h-58Z"
-          fill="none"
-          stroke="rgb(var(--brand-2) / .6)"
-          strokeWidth="1.8"
-          strokeDasharray="8 12"
-          strokeLinejoin="round"
-          vectorEffect="non-scaling-stroke"
-          className="animate-dash-move"
-          style={{ animationDuration: '2.6s' }}
-        />
-        <path
-          d="M456 286L438 273H496L514 286M438 273V319L456 332"
-          fill="none"
-          stroke={`${INK.mid}`}
-          strokeWidth="1.3"
-          strokeDasharray="5 6"
-          vectorEffect="non-scaling-stroke"
-        />
-      </g>
-
-      {/* ===================================================== a proteção ==
-             ATOR — a rota se RECOMPÕE: o trecho que havia recolhido volta a
-             crescer do ponto de ruptura até a entrega. É uma segunda cópia do
-             traçado, e não o mesmo ator do risco: assim cada movimento é medido
-             uma única vez, no seu próprio beat, e nenhum dos dois herda a
-             caixa deformada do outro. */}
+      {/* A rota refeita, agora até o fim. */}
       <g data-scene-shield>
         <path
-          d={`${ROTA_A}${ROTA_B}`}
+          data-scene-live
+          {...accentStroke(3, 1)}
+          strokeDasharray="12 8"
+          className="animate-dash-move"
+          d="M26 168C120 118 220 112 300 128S430 150 486 124"
+          filter={`url(#${ID}-glow)`}
+        />
+        <circle cx="486" cy="114" r="9" fill="rgb(var(--panel) / .96)" />
+        <circle
+          cx="486"
+          cy="114"
+          r="9"
           fill="none"
-          stroke="rgb(var(--brand-2) / .2)"
-          strokeWidth="14"
+          stroke={`url(#${ID}-brand)`}
+          strokeWidth="2"
+          vectorEffect="non-scaling-stroke"
+        />
+        <path
+          d="M481 114l4 4 7-8"
+          fill="none"
+          stroke={`url(#${ID}-brand)`}
+          strokeWidth="2.4"
           strokeLinecap="round"
+          strokeLinejoin="round"
+          vectorEffect="non-scaling-stroke"
+        />
+      </g>
+
+      {/* A COBERTURA sobre a carga caída. Era um retângulo tracejado em volta
+          de tudo e lia-se como moldura solta no meio da pista; virou o que
+          realmente se quer dizer: a mercadoria no chão continua valendo, e cada
+          volume está coberto. Luz por baixo e visto em cima. */}
+      <g data-scene-shield>
+        <ellipse
+          cx="170"
+          cy="356"
+          rx="172"
+          ry="34"
+          fill="rgb(var(--brand-2) / .14)"
           filter={`url(#${ID}-haze)`}
         />
-        <Cresce
-          box={CAIXA_ROTA}
-          px={RUPTURA_X}
-          py={RUPTURA_Y}
-          fator={9}
-          when="shield"
-          dur={0.52}
-        >
-          {/* `data-scene-draw` para que este traço receba o MESMO tratamento do
-              traçado original: o DrawSVG o desenha na construção, enquanto o
-              grupo de proteção ainda está invisível, e os dois trechos chegam
-              ao fim do capítulo com exatamente o mesmo desenho. */}
-          <g data-scene-draw>
-            <path
-              {...accentStroke(2.4, 0.9)}
-              strokeDasharray={ROTA_TRACO}
-              d={ROTA_B}
-              filter={`url(#${ID}-glow)`}
+        {[
+          [64, 338],
+          [216, 336],
+          [306, 326],
+        ].map(([cx, cy]) => (
+          <g key={cx}>
+            <circle cx={cx} cy={cy} r="11" fill="rgb(var(--panel) / .96)" />
+            <circle
+              cx={cx}
+              cy={cy}
+              r="11"
+              fill="none"
+              stroke={`url(#${ID}-brand)`}
+              strokeWidth="2"
+              vectorEffect="non-scaling-stroke"
             />
-            <circle {...accentStroke(1.9, 0.7)} cx="500" cy="72" r="11" />
+            <path
+              d={`M${cx - 5} ${cy}l4 4 7-8`}
+              fill="none"
+              stroke={`url(#${ID}-brand)`}
+              strokeWidth="2.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
           </g>
-          <circle {...accent(0.95)} cx="500" cy="72" r="5" />
-        </Cresce>
+        ))}
       </g>
-      <ShieldSeal id={ID} x={434} y={100} size={88} />
     </Scene>
   );
 }

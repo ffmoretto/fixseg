@@ -179,6 +179,31 @@ const config: Config = {
         'dash-move': { to: { strokeDashoffset: '-40' } },
 
         /* ------------------------------------------------------------------
+           VIDA PRÓPRIA DAS ILUSTRAÇÕES (data-scene-live)
+           ------------------------------------------------------------------
+           Movimento que NÃO depende da rolagem: o que continua acontecendo
+           enquanto o visitante lê o parágrafo. É o que separa uma ilustração
+           de um desenho parado. Todos mexem só em `transform`, e começam e
+           terminam no estado neutro — com movimento reduzido, o CSS global
+           zera a duração e a peça fica exatamente no lugar desenhado. */
+        /* respiração de uma figura em pé */
+        'bob-soft': {
+          '0%,100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-1.6px)' },
+        },
+        /* balanço de folhagem, cortina, lona */
+        'sway-soft': {
+          '0%,100%': { transform: 'rotate(-1.1deg)' },
+          '50%': { transform: 'rotate(1.1deg)' },
+        },
+        /* trepidação de veículo em movimento — curta e irregular */
+        'jitter-soft': {
+          '0%,100%': { transform: 'translate3d(0,0,0)' },
+          '25%': { transform: 'translate3d(0,-0.7px,0)' },
+          '60%': { transform: 'translate3d(0,0.5px,0)' },
+        },
+
+        /* ------------------------------------------------------------------
            MOVIMENTO CONTÍNUO DISCRETO (passada de "vida")
            ------------------------------------------------------------------
            Todos abaixo mexem SÓ em `transform`/`opacity`. Os que se aplicam a
@@ -248,6 +273,9 @@ const config: Config = {
         'rain-fall': 'rain-fall 1.1s linear infinite',
         'smoke-rise': 'smoke-rise 3.4s ease-out infinite',
         'dash-move': 'dash-move 1.6s linear infinite',
+        'bob-soft': 'bob-soft 3.6s ease-in-out infinite',
+        'sway-soft': 'sway-soft 5.2s ease-in-out infinite',
+        'jitter-soft': 'jitter-soft 0.42s ease-in-out infinite',
 
         /* passada de "vida" — ver os keyframes acima */
         'drift-a': 'drift-a 26s ease-in-out infinite',

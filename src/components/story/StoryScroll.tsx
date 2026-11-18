@@ -89,7 +89,7 @@ export function StoryScroll() {
            atributo original, e só a visibilidade é forçada. */
         const parts = someTargets(
           stage.querySelectorAll<SVGElement | HTMLElement>(
-            '[data-scene-fill], [data-scene-risk], [data-scene-shield], [data-scene-orbit], [data-move-when]',
+            '[data-scene-fill], [data-scene-risk], [data-scene-vanish], [data-scene-shield], [data-scene-orbit], [data-move-when]',
           ),
         );
         if (parts) {
@@ -195,6 +195,12 @@ export function StoryScroll() {
             /* MASSA — as formas preenchidas da ilustração. */
             const fills = ch.querySelectorAll('[data-scene-fill]');
             const risks = ch.querySelectorAll<SVGElement>('[data-scene-risk]');
+            /* O CONTRÁRIO DO RISCO: o que SAI no instante do imprevisto.
+               Existe para contar uma ausência — a pessoa que deixa de estar na
+               cena, a luz da casa que apaga, a rota que se rompe. Sem isto só
+               dava para ACRESCENTAR coisas ao quadro, e falta não se desenha
+               acrescentando. */
+            const vanishes = ch.querySelectorAll<SVGElement>('[data-scene-vanish]');
             const shields = ch.querySelectorAll('[data-scene-shield]');
             const checks = ch.querySelectorAll('[data-shield-check]');
             const orbits = ch.querySelectorAll('[data-scene-orbit]');
@@ -341,6 +347,22 @@ export function StoryScroll() {
 
             tl.to(risk, { autoAlpha: 1, y: 0, duration: 0.3 }, momentoRisco + 0.14);
             tl.to({}, { duration: 0.26 });
+
+            /* O QUE DESAPARECE.
+               Sai um pouco DEPOIS do que entra, e mais devagar: uma ausência
+               que some junto com o susto não é percebida como ausência — vira
+               parte do susto. O escalonamento sai de `data-risk-delay`, o mesmo
+               atributo que ordena a entrada dos elementos de risco. */
+            if (vanishes.length) {
+              Array.from(vanishes).forEach((el) => {
+                const atraso = Number(el.getAttribute('data-risk-delay') || 0) * 0.06;
+                tl.to(
+                  el,
+                  { autoAlpha: 0, duration: 0.42, ease: 'power2.inOut' },
+                  momentoRisco + 0.1 + atraso,
+                );
+              });
+            }
 
             /* --- 3. a proteção ------------------------------------------- */
             const momentoEscudo = tl.duration();

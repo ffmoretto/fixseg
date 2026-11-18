@@ -697,6 +697,10 @@ html[data-motion='reduced'] *::after {
    proteção aparecia fora da cena. `filter: none` apagava o brilho e a névoa. */
 html[data-motion='reduced'] [data-scene-fill],
 html[data-motion='reduced'] [data-scene-risk],
+/* O que "desaparece" no imprevisto fica VISÍVEL sem movimento: parado, o
+   quadro precisa mostrar a cena inteira, e a história é contada pelo texto
+   ao lado. */
+html[data-motion='reduced'] [data-scene-vanish],
 html[data-motion='reduced'] [data-scene-shield],
 html[data-motion='reduced'] [data-scene-orbit] {
   opacity: 1 !important;
